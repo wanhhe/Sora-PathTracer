@@ -36,6 +36,7 @@ add_executable(${PROJECT_NAME}
     include/camera.h
     include/accel_structure.h
     include/utils.h
+    include/model.h
 
     # sources
     src/main.cpp
@@ -48,6 +49,7 @@ add_executable(${PROJECT_NAME}
     src/camera.cpp
     src/accel_structure.cpp
     src/utils.cpp
+    src/model.cpp
 )
 
 find_package(Threads REQUIRED)
