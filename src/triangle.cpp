@@ -8,6 +8,27 @@ Triangle::Triangle(const vec3& _v0, const vec3& _v1, const vec3& _v2, const vec3
 	area = glm::length(cross(e1, e2)) * 0.5f;
 }
 
-float Triangle::getArea() const {
-	return area;
+bool Triangle::intersect(const Ray& ray, float& tNear, float& b1, float& b2) const {
+	vec3 s1 = cross(ray.direction, e2);
+	float det = dot(s1, e1);
+	if (det <= 0) return false;
+
+	vec3 s = ray.origin - v0;
+	b1 = dot(s1, s);
+	// 本来是大于1，但这里b1还没有除以系数，所以相当于放大了
+	if (b1 < 0 || b1 > det) return false;
+
+	vec3 s2 = cross(s, e1);
+	b2 = dot(s2, ray.direction);
+	if (b2 < 0 || b1 + b2 > det) return false;
+
+	float invDet = 1.f / det;
+	tNear = invDet * dot(e2, s2);
+	b1 *= invDet;
+	b2 *= invDet;
+	return true;
+}
+
+vec3 Triangle::getNormal(float t, float u, float v) const {
+	return t * n0 + u * n1 + v * n2;
 }
