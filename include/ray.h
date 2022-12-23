@@ -10,7 +10,6 @@ public:
 		inv_direction = { 1 / direction.x, 1 / direction.y, 1 / direction.z };
 	}
 
-private:
 	vec3 origin;
 	vec3 direction;
 	vec3 inv_direction;
