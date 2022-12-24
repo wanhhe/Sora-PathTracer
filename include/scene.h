@@ -9,6 +9,10 @@ class Scene {
 public:
 	Scene() = default;
 
+	void loadSceneBox(Config* config);
+	void loadSceneBunny(Config* config);
+	void add(Object* object) { objects.emplace_back(object); }
+
 	void buildNaive();
 	void buildBVH();
 	void buildSAH();
