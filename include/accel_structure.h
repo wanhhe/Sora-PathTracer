@@ -1,7 +1,6 @@
 #ifndef PATHTRACER_ACCEL_STRUCTURE_H
 #define PATHTRACER_ACCEL_STRUCTURE_H
 
-#include "triangle.h"
 #include "intersection.h"
 #include "object.h"
 
@@ -25,6 +24,18 @@ struct AABB
 	vec3 upperBound;
 };
 
+struct TreeNode
+{
+	AABB box;
+	bool isLeaf;
+	int triangleIndex;
+	TreeNode* leftChild;
+	TreeNode* rightChild;
+
+	TreeNode(AABB _box, bool _leaf, int _triangleIndex, TreeNode* _leftChild, TreeNode* _rightChild)
+		: box(_box), isLeaf(_leaf), triangleIndex(_triangleIndex), leftChild(_leftChild), rightChild(_rightChild) {}
+};
+
 class AccelStructure {
 public:
 	AccelStructure() = default;
@@ -44,10 +55,12 @@ class BVHAccelStructure : public AccelStructure {
 public:
 	explicit BVHAccelStructure(vector<Object*> objects);
 	bool intersect(const Ray& ray, Intersection& intersection) override;
+	TreeNode* buildBVHTree(vector<int>& indices);
 
 private:
-
-
+	vector<Triangle*> container;
+	vector<AABB> containerAABB;
+	TreeNode* root = nullptr;
 };
 
 class SAHAccelStructure : public AccelStructure {
@@ -56,7 +69,9 @@ public:
 	bool intersect(const Ray& ray, Intersection& intersection) override;
 
 private:
-
+	vector<Triangle*> container;
+	vector<AABB*> containerAABB;
+	TreeNode* root = nullptr;
 };
 
 

@@ -14,6 +14,10 @@ public:
 	shared_ptr<Material> getMaterial() const { return material; }
 	float getArea() const { return area; }
 
+	float getBarycenterX() const { return (v0.x + v1.x + v2.x) / 3.0f; }
+	float getBarycenterY() const { return (v0.y + v1.y + v2.y) / 3.0f; }
+	float getBarycenterZ() const { return (v0.z + v1.z + v2.z) / 3.0f; }
+
 public:
 	vec3 v0, v1, v2;  // vertices
 	vec3 n0, n1, n2;  // normal
