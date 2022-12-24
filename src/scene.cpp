@@ -29,8 +29,6 @@ void Scene::loadSceneBox(Config* config) {
 	objects.emplace_back(shortBox);
 	objects.emplace_back(tallBox);
 	objects.emplace_back(light);
-
-
 }
 
 void Scene::loadSceneBunny(Config* config) {

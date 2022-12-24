@@ -46,6 +46,7 @@ using glm::normalize;
 using glm::dot;
 using glm::cross;
 using glm::lookAt;
+using glm::linearRand;
 
 
 enum MaterialEnum {
