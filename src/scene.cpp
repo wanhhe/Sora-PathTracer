@@ -15,6 +15,22 @@ void Scene::loadSceneBox(Config* config) {
 	default:
 		throw std::runtime_error("Material not supported");
 	}
+
+	Object* floor = new Object("../models/cornellbox/floor.obj", whiteDiffuseMaterial);
+	Object* left = new Object("../models/cornellbox/left.obj", redDiffuseMaterial);
+	Object* right = new Object("../models/cornellbox/right.obj", greenDiffuseMaterial);
+	Object* shortBox = new Object("../models/cornellbox/shortbox.obj", whiteDiffuseMaterial);
+	Object* tallBox = new Object("../models/cornellbox/tallbox.obj", tallBoxMaterial);
+	Object* light = new Object("../models/cornellbox/light.obj", lightMaterial);
+
+	objects.emplace_back(floor);
+	objects.emplace_back(left);
+	objects.emplace_back(right);
+	objects.emplace_back(shortBox);
+	objects.emplace_back(tallBox);
+	objects.emplace_back(light);
+
+
 }
 
 void Scene::loadSceneBunny(Config* config) {
