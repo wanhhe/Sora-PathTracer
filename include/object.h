@@ -1,7 +1,6 @@
 #ifndef PATHTRACER_OBJECT_H
 #define PATHTRACER_OBJECT_H
 
-#include "material.h"
 #include "triangle.h"
 
 class Object {

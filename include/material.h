@@ -21,7 +21,7 @@ private:
 
 class DiffuseMaterial : public Material {
 public:
-	explicit DiffuseMaterial(const vec3& albedo) : Material(DIFFUSE, false), albedo(_albedo) {}
+	explicit DiffuseMaterial(const vec3& _albedo) : Material(DIFFUSE, false), albedo(_albedo) {}
 
 	vec3 brdf(const vec3& rayInDir, const vec3& rayOutDir, const vec3& normal) const override;
 
