@@ -61,15 +61,21 @@ enum AccelStructureEnum {
     SAH
 };
 
+enum RenderModeEnum {
+    NAIVE = 0,
+    OPENGL
+};
+
 typedef struct Config {
     int sampleCount;
     MaterialEnum material;
     float roughness;
     int threadCount;
     AccelStructureEnum accelStructure;
-    Config(int _sampleCount, MaterialEnum _material, int _threadCount, float _roughness, AccelStructureEnum _accelStructure): sampleCount(_sampleCount), 
-        material(_material), threadCount(_threadCount),
-        roughness(_roughness), accelStructure(_accelStructure) {}
+    RenderModeEnum renderMode;
+
+    Config(int _sampleCount, MaterialEnum _material, int _threadCount, float _roughness, AccelStructureEnum _accelStructure, RenderModeEnum _renderMode): 
+        sampleCount(_sampleCount), material(_material), threadCount(_threadCount), roughness(_roughness), accelStructure(_accelStructure), renderMode(_renderMode) {}
 } Config;
 
 #endif // PATHTRACER_COMMON_H

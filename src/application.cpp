@@ -8,7 +8,7 @@ Application::Application(): nanogui::Screen(nanogui::Vector2i(SCREEN_WIDTH + FOR
                                             "PathTracer", false) {
     using namespace nanogui;
 
-    config = new Config(1, DIFFUSE, 1, 0.2, SAH);
+    config = new Config(1, DIFFUSE, 1, 0.2, SAH, OPENGL);
 
     FormHelper *form = new FormHelper(this);
     ref<Window> setting = form->addWindow(Vector2i(MARGIN, MARGIN), "Settings");
@@ -17,8 +17,13 @@ Application::Application(): nanogui::Screen(nanogui::Vector2i(SCREEN_WIDTH + FOR
 
     // 渲染设置
     form->addGroup("Rendering Settings");
+    // 渲染方式
+    auto vRenderMode = form->addVariable("RenderMode", config->renderMode);
+    vRenderMode->setFixedWidth(VALUE_WIDTH);
+    vRenderMode->setItems({ "Naive", "OpenGL" });
+    vRenderMode->setTooltip("if choose OpenGL, the OpenGL environment is needed.");
+
     // 可选择的模型
-    form->addWidget("test", new Widget(this));
 
     // 采样次数
     auto vSampleCount = form->addVariable("SPP", config->sampleCount);
