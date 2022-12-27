@@ -11,7 +11,8 @@ public:
 	Ray getRayRandom(int row, int col);
 
 	float deltaTime;
-	float speed;
+	float translateSpeed;
+	float scaleSpeed;
 	vec3 cameraPos;
 	vec3 cameraFront;
 	vec3 cameraUp;

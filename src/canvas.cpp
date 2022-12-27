@@ -14,7 +14,6 @@ MyGLCanvas::MyGLCanvas(Widget* parent) : nanogui::GLCanvas(parent) {
         "in vec3 color;\n"
         "out vec4 frag_color;\n"
         "void main() {\n"
-        /*"    frag_color = 3.0 * modelViewProj * vec4(color, 1.0);\n"*/
         "    frag_color = vec4(color, 1.0);\n"
         "    gl_Position = modelViewProj * vec4(position, 1.0);\n"
         "}",
@@ -70,7 +69,8 @@ MyGLCanvas::MyGLCanvas(Widget* parent) : nanogui::GLCanvas(parent) {
     camera->cameraPos = vec3(0.0f, 0.0f, 3.0f);
     camera->cameraFront = vec3(0.0f, 0.0f, -1.0f);
     camera->cameraUp = vec3(0.0f, 1.0f, 0.0f);
-    camera->speed = 0.5;
+    camera->translateSpeed = 0.01;
+    camera->scaleSpeed = 0.15;
 
     model = mat4(1.0f);
     projection = glm::perspective(radians(45.f), 1.0f, 0.1f, 100.0f);
@@ -106,20 +106,58 @@ bool MyGLCanvas::keyboardEvent(int key, int scancode, int action, int modifiers)
     std::cout << camera->cameraPos.x << " " << camera->cameraPos.y << " " << camera->cameraPos.z << std::endl;
     if (key == GLFW_KEY_W && action == GLFW_PRESS) {
         std::cout << "gl press override" << std::endl;
-        camera->cameraPos += camera->speed * camera->cameraFront;
+        camera->cameraPos += camera->translateSpeed * camera->cameraFront;
         return true;
     }
     else if (key == GLFW_KEY_S && action == GLFW_PRESS) {
-        camera->cameraPos -= camera->speed * camera->cameraFront;
+        camera->cameraPos -= camera->translateSpeed * camera->cameraFront;
         return true;
     }
     else if (key == GLFW_KEY_A && action == GLFW_PRESS) {
-        camera->cameraPos -= normalize(cross(camera->cameraFront, camera->cameraUp)) * camera->speed;
+        camera->cameraPos -= normalize(cross(camera->cameraFront, camera->cameraUp)) * camera->translateSpeed;
         return true;
     }
     else if (key == GLFW_KEY_D && action == GLFW_PRESS) {
-        camera->cameraPos += normalize(cross(camera->cameraFront, camera->cameraUp)) * camera->speed;
+        camera->cameraPos += normalize(cross(camera->cameraFront, camera->cameraUp)) * camera->translateSpeed;
         return true;
+    }
+    return false;
+}
+
+bool MyGLCanvas::scrollEvent(const nanogui::Vector2i& p, const nanogui::Vector2f& rel) {
+    // p是鼠标位置，rel是鼠标的滚动，(0,1)是前滚，(0,-1)是后滚
+    //std::cout << "scroll" << std::endl;
+    //std::cout << p.x() << " " << p.y() << std::endl;
+    //std::cout << rel.x() << " " << rel.y() << std::endl;
+    if (rel.y() == 1) {
+        camera->cameraPos += camera->scaleSpeed * camera->cameraFront;
+        return true;
+    }
+    else if (rel.y() == -1) {
+        camera->cameraPos -= camera->scaleSpeed * camera->cameraFront;
+        return true;
+    }
+    return false;
+}
+
+bool MyGLCanvas::mouseDragEvent(const nanogui::Vector2i& p, const nanogui::Vector2i& rel, int button, int modifiers) {
+    // 左键是1，右键是2，p是鼠标位置，rel是相对于上一步朝哪个方向移动
+    std::cout << button << std::endl;
+    std::cout << p.x() << " " << p.y() << std::endl;
+    std::cout << rel.x() << " " << rel.y() << std::endl;
+    if (button == 1) {
+
+    }
+    else if (button == 2) {
+        if (rel.x() == 1) {
+            camera->cameraPos -= normalize(cross(camera->cameraFront, camera->cameraUp)) * camera->translateSpeed;
+        }
+        else if (rel.x() == -1) {
+            camera->cameraPos += normalize(cross(camera->cameraFront, camera->cameraUp)) * camera->translateSpeed;
+        }
+        else if (rel.y() == 1) {
+
+        } 
     }
     return false;
 }
