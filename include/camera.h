@@ -6,8 +6,15 @@
 
 class Camera {
 public:
+	Camera() = default;
 	Camera(vec3 lookFrom, vec3 lookTarget, vec3 up, float fov, float aspectRation);
 	Ray getRayRandom(int row, int col);
+
+	float deltaTime;
+	float speed;
+	vec3 cameraPos;
+	vec3 cameraFront;
+	vec3 cameraUp;
 
 private:
 	vec3 origin;
