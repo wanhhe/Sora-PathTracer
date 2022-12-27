@@ -47,10 +47,14 @@ private:
 
 class MicrofacetMaterial : public Material {
 public:
-
+	explicit MicrofacetMaterial(const vec3& _albedo, float _roughness) : Material(MICROFACET, false), albedo(_albedo), roughness(_roughness) {}
 	vec3 brdf(const vec3& rayInDir, const vec3& rayOutDir, const vec3& normal) const override;
+	vec3 getColor() const override { return albedo; }
+	float getRoughness() const { return roughness; }
+
 private:
 	float roughness;
+	vec3 albedo;
 };
 
 
