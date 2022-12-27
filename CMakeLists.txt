@@ -24,34 +24,34 @@ include_directories("F:/opengl/include")
 add_executable(${PROJECT_NAME}
     # headers
     include/common.h
-    include/application.h
-    include/renderer.h
-    include/obj_loader.h
-    include/scene.h
-    include/object.h
-    include/triangle.h
+    #include/application.h
+    #include/renderer.h
+    #include/obj_loader.h
+    #include/scene.h
+    #include/object.h
+    #include/triangle.h
     include/ray.h
-    include/material.h
-    include/intersection.h
+    #include/material.h
+    #include/intersection.h
     include/camera.h
-    include/accel_structure.h
-    include/utils.h
-    include/texture.h
+    #include/accel_structure.h
+    #include/utils.h
+    #include/texture.h
     
 
     # sources
     src/main.cpp
-    src/application.cpp
-    src/renderer.cpp
-    src/scene.cpp
-    src/object.cpp
-    src/triangle.cpp
-    src/material.cpp
+    #src/application.cpp
+    #src/renderer.cpp
+    #src/scene.cpp
+    #src/object.cpp
+    #src/triangle.cpp
+    #src/material.cpp
     src/camera.cpp
-    src/accel_structure.cpp
-    src/utils.cpp
-    src/texture.cpp
-)
+    #src/accel_structure.cpp
+    #src/utils.cpp
+    #src/texture.cpp
+    "include/example.h" "src/example.cpp" "include/canvas.h" "src/canvas.cpp")
 
 find_package(Threads REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC nanogui Threads::Threads)
