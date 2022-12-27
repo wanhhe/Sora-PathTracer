@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <stack>
+#include <memory>
 
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>

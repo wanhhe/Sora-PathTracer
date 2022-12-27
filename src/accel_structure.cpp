@@ -146,5 +146,5 @@ SAHAccelStructure::SAHAccelStructure(vector<Object*> objects) {
 }
 
 bool SAHAccelStructure::intersect(const Ray& ray, Intersection& intersection) {
-
+	return true;
 }

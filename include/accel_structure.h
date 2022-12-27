@@ -70,7 +70,7 @@ public:
 
 private:
 	vector<Triangle*> container;
-	vector<AABB*> containerAABB;
+	vector<AABB> containerAABB;
 	TreeNode* root = nullptr;
 };
 

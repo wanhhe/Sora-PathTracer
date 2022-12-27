@@ -23,7 +23,7 @@ void Renderer::render() {
 				}
 			}
 			});
-		threaPool.emplace_back(t);
+		threaPool.emplace_back(std::move(t));
 	}
 	for (auto& t : threaPool) t.join();
 

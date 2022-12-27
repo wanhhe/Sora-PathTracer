@@ -10,7 +10,7 @@ Object::Object(const string& filename, shared_ptr<Material> _material) {
 	for (int i = 0; i < loader.LoadedMeshes.size(); i++) {
 		auto mesh = loader.LoadedMeshes[i];
 		for (int j = 0; j < mesh.Vertices.size(); j += 3) {
-			Triangle currentTriangle(
+			Triangle* currentTriangle = new Triangle(
 				vec3(mesh.Vertices[i].Position.X, mesh.Vertices[i].Position.Y, mesh.Vertices[i].Position.Z),
 				vec3(mesh.Vertices[i + 1].Position.X, mesh.Vertices[i + 1].Position.Y, mesh.Vertices[i + 1].Position.Z),
 				vec3(mesh.Vertices[i + 2].Position.X, mesh.Vertices[i + 2].Position.Y, mesh.Vertices[i + 2].Position.Z),
