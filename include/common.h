@@ -13,6 +13,7 @@
 #define TWO_PI 6.283185307
 #define INV_PI 0.31830988618
 #define INV_TWO_PI 0.15915494309
+#define EPSILON 1e-5f
 
 #define SCREEN_WIDTH 512
 #define SCREEN_HEIGHT 512
@@ -42,7 +43,7 @@ using glm::mat4;
 using glm::radians;
 using glm::tan;
 using glm::sin;
-using glm::cos;
+//using glm::cos;
 using glm::normalize;
 using glm::dot;
 using glm::cross;
