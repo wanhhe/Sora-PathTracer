@@ -287,9 +287,12 @@ bool MyGLCanvas::scrollEvent(const nanogui::Vector2i& p, const nanogui::Vector2f
 bool MyGLCanvas::mouseButtonEvent(const nanogui::Vector2i& p, int button, bool down, int modifiers) {
     // button左键是0，右键是1
     // down 按下是1，松开是0
+    if (!focused()) {
+        requestFocus();
+    }
     vec2 cursorPos = vec2(p.x(), p.y());
     camera->cursor = cursorPos;
-    if (button == 0) {
+    if (button == GLFW_MOUSE_BUTTON_1) {
         if (down) {
             camera->isOrbiting = true;
             camera->orbitPos = cursorPos;
@@ -302,7 +305,7 @@ bool MyGLCanvas::mouseButtonEvent(const nanogui::Vector2i& p, int button, bool d
         //std::cout << camera->orbitPos.x << " " << camera->orbitPos.y << std::endl;
         return true;
     }
-    else if (button == 1) {
+    else if (button == GLFW_MOUSE_BUTTON_2) {
         if (down) {
             camera->isPanning = true;
             camera->panPos = cursorPos;
@@ -334,14 +337,15 @@ bool MyGLCanvas::mouseDragEvent(const nanogui::Vector2i& p, const nanogui::Vecto
     return true;
 }
 
-bool MyGLCanvas::keyboardEvent(int key, int scancode, int action, int modifiers) {
-    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-        //std::cout << "recover" << std::endl;
-        camera->recoverDefaultLocation();
-        return true;
-    }
-    return false;
-}
+//bool MyGLCanvas::keyboardEvent(int key, int scancode, int action, int modifiers) {
+//    std::cout << "keyboard" << std::endl;
+//    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+//        std::cout << "recover" << std::endl;
+//        camera->recoverDefaultLocation();
+//        return true;
+//    }
+//    return false;
+//}
 
 bool MyGLCanvas::mouseMotionEvent(const nanogui::Vector2i& p, const nanogui::Vector2i& rel, int button, int modifiers) {
     camera->cursor = vec2(p.x(), p.y());
@@ -378,12 +382,12 @@ void MyGLCanvas::updateCamera() {
     //    std::cout << std::endl;
     //    count1++;
     //}
-    if (count1 == 1) {
-        std::cout << camera->position.x << " ei " << camera->position.y << " " << camera->position.z << std::endl;
-        std::cout << camera->target.x << " " << camera->target.y << " " << camera->target.z << std::endl;
-        std::cout << std::endl;
-        count1++;
-    }
+    //if (count1 == 1) {
+    //    std::cout << camera->position.x << " ei " << camera->position.y << " " << camera->position.z << std::endl;
+    //    std::cout << camera->target.x << " " << camera->target.y << " " << camera->target.z << std::endl;
+    //    std::cout << std::endl;
+    //    count1++;
+    //}
     //std::cout << camera->position.x << " " << camera->position.y << " " << camera->position.z << std::endl;
     //std::cout << camera->target.x << " " << camera->target.y << " " << camera->target.z << std::endl;
     //std::cout << std::endl;
@@ -398,4 +402,15 @@ void MyGLCanvas::updateCamera() {
     //std::cout << camera->position.x << " " << camera->position.y << " " << camera->position.z << std::endl;
     //std::cout << camera->target.x << " " << camera->target.y << " " << camera->target.z << std::endl;
     //std::cout << std::endl;
+}
+
+bool MyGLCanvas::keyboardEvent(int key, int scancode, int action, int modifiers) {
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+        setVisible(false);
+        return false;
+    }
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+        camera->recoverDefaultLocation();
+    }
+    return true;
 }
