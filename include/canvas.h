@@ -1,6 +1,7 @@
 #include <nanogui/nanogui.h>
 
 #include "camera.h"
+#include "model.h"
 
 class MyGLCanvas : public nanogui::GLCanvas {
 public:
@@ -34,4 +35,5 @@ private:
     mat4 view;
     mat4 projection;
     Camera* camera;
+    Model hikari;
 };

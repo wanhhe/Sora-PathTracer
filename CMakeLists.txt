@@ -18,7 +18,6 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 include_directories("C:/Program Files (x86)/Eigen3/include/eigen3")
-include_directories("F:/glfw-3.3.7.bin.WIN64/include")
 include_directories("F:/opengl/include")
 
 add_executable(${PROJECT_NAME}
@@ -37,7 +36,11 @@ add_executable(${PROJECT_NAME}
     #include/accel_structure.h
     #include/utils.h
     #include/texture.h
-    
+    include/stb_image.h
+    include/model.h
+    include/mesh.h
+    include/canvas.h
+    include/example.h
 
     # sources
     src/main.cpp
@@ -51,10 +54,17 @@ add_executable(${PROJECT_NAME}
     #src/accel_structure.cpp
     #src/utils.cpp
     #src/texture.cpp
-    "include/example.h" "src/example.cpp" "include/canvas.h" "src/canvas.cpp")
+    src/example.cpp
+    src/canvas.cpp
+    src/mesh.cpp
+    src/model.cpp
+)
 
 find_package(Threads REQUIRED)
+target_link_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 target_link_libraries(${PROJECT_NAME} PUBLIC nanogui Threads::Threads)
+target_link_libraries(${PROJECT_NAME} PUBLIC "libassimp")
+
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     ext/nanogui/include

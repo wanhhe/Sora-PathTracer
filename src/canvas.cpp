@@ -2,70 +2,103 @@
 
 int count1 = 1;
 
-MyGLCanvas::MyGLCanvas(Widget* parent) : nanogui::GLCanvas(parent) {
+MyGLCanvas::MyGLCanvas(Widget* parent) : nanogui::GLCanvas(parent), hikari("../models/Reisalin_Stout/Reisalin_Stout.obj") {
     using namespace nanogui;
 
+    //mShader.init(
+    //    /* An identifying name */
+    //    "a_simple_shader",
+
+    //    /* Vertex shader */
+    //    "#version 330\n"
+    //    "uniform mat4 modelViewProj;\n"
+    //    "in vec3 position;\n"
+    //    "in vec3 color;\n"
+    //    "out vec4 frag_color;\n"
+    //    "void main() {\n"
+    //    "    frag_color = vec4(color, 1.0);\n"
+    //    "    gl_Position = modelViewProj * vec4(position, 1.0);\n"
+    //    "}",
+
+    //    /* Fragment shader */
+    //    "#version 330\n"
+    //    "out vec4 color;\n"
+    //    "in vec4 frag_color;\n"
+    //    "void main() {\n"
+    //    "    color = frag_color;\n"
+    //    "}"
+    //);
     mShader.init(
         /* An identifying name */
         "a_simple_shader",
 
         /* Vertex shader */
-        "#version 330\n"
+        "#version 330 core\n"
+        "layout(location = 0) in vec3 aPos;\n"
+        "layout(location = 1) in vec3 aNormal;\n"
+        "layout(location = 2) in vec2 aTexCoords;\n"
+
+        "out vec2 TexCoords;\n"
         "uniform mat4 modelViewProj;\n"
-        "in vec3 position;\n"
-        "in vec3 color;\n"
-        "out vec4 frag_color;\n"
-        "void main() {\n"
-        "    frag_color = vec4(color, 1.0);\n"
-        "    gl_Position = modelViewProj * vec4(position, 1.0);\n"
-        "}",
+
+        "void main(){\n"
+            "TexCoords = aTexCoords;\n"
+            "gl_Position = modelViewProj * vec4(aPos, 1.0);\n"
+        "}\n",
 
         /* Fragment shader */
-        "#version 330\n"
-        "out vec4 color;\n"
-        "in vec4 frag_color;\n"
-        "void main() {\n"
-        "    color = frag_color;\n"
-        "}"
+        "#version 330 core\n"
+        "out vec4 FragColor;\n"
+
+        "in vec2 TexCoords;\n"
+
+        "uniform sampler2D texture_diffuse1;\n"
+
+        "void main(){\n"
+            "FragColor = texture(texture_diffuse1, TexCoords);\n"
+        "}\n"
+
+        
     );
 
-    MatrixXu indices(3, 12); /* Draw a cube */
-    indices.col(0) << 0, 1, 3;
-    indices.col(1) << 3, 2, 1;
-    indices.col(2) << 3, 2, 6;
-    indices.col(3) << 6, 7, 3;
-    indices.col(4) << 7, 6, 5;
-    indices.col(5) << 5, 4, 7;
-    indices.col(6) << 4, 5, 1;
-    indices.col(7) << 1, 0, 4;
-    indices.col(8) << 4, 0, 3;
-    indices.col(9) << 3, 7, 4;
-    indices.col(10) << 5, 6, 2;
-    indices.col(11) << 2, 1, 5;
 
-    MatrixXf positions(3, 8);
-    positions.col(0) << -0.5, 0.5, 0.5;
-    positions.col(1) << -0.5, 0.5, -0.5;
-    positions.col(2) << 0.5, 0.5, -0.5;
-    positions.col(3) << 0.5, 0.5, 0.5;
-    positions.col(4) << -0.5, -0.5, 0.5;
-    positions.col(5) << -0.5, -0.5, -0.5;
-    positions.col(6) << 0.5, -0.5, -0.5;
-    positions.col(7) << 0.5, -0.5, 0.5;
+    //MatrixXu indices(3, 12); /* Draw a cube */
+    //indices.col(0) << 0, 1, 3;
+    //indices.col(1) << 3, 2, 1;
+    //indices.col(2) << 3, 2, 6;
+    //indices.col(3) << 6, 7, 3;
+    //indices.col(4) << 7, 6, 5;
+    //indices.col(5) << 5, 4, 7;
+    //indices.col(6) << 4, 5, 1;
+    //indices.col(7) << 1, 0, 4;
+    //indices.col(8) << 4, 0, 3;
+    //indices.col(9) << 3, 7, 4;
+    //indices.col(10) << 5, 6, 2;
+    //indices.col(11) << 2, 1, 5;
 
-    MatrixXf colors(3, 12);
-    colors.col(0) << 1, 0, 0;
-    colors.col(1) << 0, 1, 0;
-    colors.col(2) << 1, 1, 0;
-    colors.col(3) << 0, 0, 1;
-    colors.col(4) << 1, 0, 1;
-    colors.col(5) << 0, 1, 1;
-    colors.col(6) << 1, 1, 1;
-    colors.col(7) << 0.5, 0.5, 0.5;
-    colors.col(8) << 1, 0, 0.5;
-    colors.col(9) << 1, 0.5, 0;
-    colors.col(10) << 0.5, 1, 0;
-    colors.col(11) << 0.5, 1, 0.5;
+    //MatrixXf positions(3, 8);
+    //positions.col(0) << -0.5, 0.5, 0.5;
+    //positions.col(1) << -0.5, 0.5, -0.5;
+    //positions.col(2) << 0.5, 0.5, -0.5;
+    //positions.col(3) << 0.5, 0.5, 0.5;
+    //positions.col(4) << -0.5, -0.5, 0.5;
+    //positions.col(5) << -0.5, -0.5, -0.5;
+    //positions.col(6) << 0.5, -0.5, -0.5;
+    //positions.col(7) << 0.5, -0.5, 0.5;
+
+    //MatrixXf colors(3, 12);
+    //colors.col(0) << 1, 0, 0;
+    //colors.col(1) << 0, 1, 0;
+    //colors.col(2) << 1, 1, 0;
+    //colors.col(3) << 0, 0, 1;
+    //colors.col(4) << 1, 0, 1;
+    //colors.col(5) << 0, 1, 1;
+    //colors.col(6) << 1, 1, 1;
+    //colors.col(7) << 0.5, 0.5, 0.5;
+    //colors.col(8) << 1, 0, 0.5;
+    //colors.col(9) << 1, 0.5, 0;
+    //colors.col(10) << 0.5, 1, 0;
+    //colors.col(11) << 0.5, 1, 0.5;
 
     camera = new Camera(vec3(0.0f, 0.0f, 3.0f), vec3(0.f, 0.f, 0.f), 1.0f);
     //camera->cameraPos = vec3(0.0f, 0.0f, 3.0f);
@@ -78,11 +111,13 @@ MyGLCanvas::MyGLCanvas(Widget* parent) : nanogui::GLCanvas(parent) {
 
     model = mat4(1.0f);
 
-    mShader.bind();
-    mShader.uploadIndices(indices);
+    //mShader.bind();
+ /*   mShader.uploadIndices(indices);
 
     mShader.uploadAttrib("position", positions);
-    mShader.uploadAttrib("color", colors);
+    mShader.uploadAttrib("color", colors);*/
+
+    std::cout << "shaderID " << mShader.getShaderID() << std::endl;
 }
 
 void MyGLCanvas::drawGL() {
@@ -109,7 +144,8 @@ void MyGLCanvas::drawGL() {
 
     glEnable(GL_DEPTH_TEST);
     /* Draw 12 triangles starting at index 0 */
-    mShader.drawIndexed(GL_TRIANGLES, 0, 12);
+    //mShader.drawIndexed(GL_TRIANGLES, 0, 12);
+    hikari.draw(mShader);
     glDisable(GL_DEPTH_TEST);
 }
 
