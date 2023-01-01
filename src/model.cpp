@@ -5,9 +5,7 @@
 #pragma comment(lib, "libassimp.dll.a")
 
 Model::Model(const string& path) {
-	std::cout << "model loading..." << std::endl;
 	loadModel(path);
-	std::cout << "model loaded finish" << std::endl;
 }
 
 void Model::draw(nanogui::GLShader& shader) {
@@ -29,31 +27,21 @@ void Model::loadModel(const string& path) {
 		return;
 	}
 
-	std::cout << "LoadFinish ! NumVertices : " << (*(scene->mMeshes))->mNumVertices << std::endl;
-	std::cout << "scene loading finish" << std::endl;
 	directory = path.substr(0, path.find_last_of('/'));
-	std::cout << "root node children num: " << scene->mRootNode->mNumChildren << std::endl;
-	std::cout << "root node meshes num: " << scene->mRootNode->mNumMeshes << std::endl;
 	processNode(scene->mRootNode, scene);
 }
 
 void Model::processNode(aiNode* node, const aiScene* scene) {
-	std::cout << "node meshes: " <<  node->mNumMeshes << std::endl;
 	// �����ڵ��е�����
 	for (unsigned int i = 0; i < node->mNumMeshes; i++) {
-		std::cout << "enter" << std::endl;
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-		std::cout << mesh->mNumVertices << std::endl;
 		meshes.emplace_back(processMesh(mesh, scene));
-		std::cout << "emplace_back success" << std::endl;
 	}
-	std::cout << "node loading finish" << std::endl;
-	std::cout << node->mNumMeshes << std::endl;
+
 	// �ݹ��ӽ��
 	for (unsigned int i = 0; i < node->mNumChildren; i++) {
 		processNode(node->mChildren[i], scene);
 	}
-	std::cout << "children node loading finish" << std::endl;
 }
 
 Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
@@ -61,7 +49,6 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 	vector<unsigned int> indices;
 	vector<Texture> textures;
 
-	std::cout << "debug1" << std::endl;
 	for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
 		Vertex vertex;
 		vertex.position.x = mesh->mVertices[i].x;
@@ -91,8 +78,6 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 		vertices.emplace_back(vertex);
 	}
 
-	std::cout << "debug2" << std::endl;
-	std::cout << "mNumFaces: " << mesh->mNumFaces << std::endl;
 	for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
 		aiFace face = mesh->mFaces[i];
 		for (unsigned int j = 0; j < face.mNumIndices; j++) {
@@ -100,7 +85,6 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 		}
 	}
 
-	std::cout << "debug3" << std::endl;
 	// ���һ�������Ƿ��������
 	if (mesh->mMaterialIndex >= 0) {
 		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];

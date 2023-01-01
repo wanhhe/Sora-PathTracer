@@ -117,7 +117,7 @@ MyGLCanvas::MyGLCanvas(Widget* parent) : nanogui::GLCanvas(parent), hikari("../m
     mShader.uploadAttrib("position", positions);
     mShader.uploadAttrib("color", colors);*/
 
-    std::cout << "shaderID " << mShader.getShaderID() << std::endl;
+    //std::cout << "shaderID " << mShader.getShaderID() << std::endl;
 }
 
 void MyGLCanvas::drawGL() {
