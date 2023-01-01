@@ -39,7 +39,7 @@ class Camera {
 public:
 	Camera() = default;
 	Camera(vec3 _position, vec3 _target, float _aspect) : 
-		position(_position), target(_target), aspect(_aspect), up(vec3(0,1,0)), fov(radians(60.0f)), 
+		position(_position), target(_target), aspect(_aspect), up(vec3(0,1,0)), fov(radians(45.0f)), 
 		isPanning(false), isOrbiting(false), cameraPosition(vec3(0,0,3.0f)), cameraTarget(vec3(0,0,0)), cursor(vec2(200.f, 200.f)), orbitDelta(vec2(0.f, 0.f)),
 	    panDelta(vec2(0.f, 0.f)) {}
 	vec3 calculatePan(vec3 fromCamera);
