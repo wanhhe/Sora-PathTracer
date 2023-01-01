@@ -82,12 +82,12 @@ void Camera::updateTransform() {
     //    std::cout << std::endl;
     //    count++;
     //}
-    if (count == 1) {
-        std::cout << _pan.x << " " << _pan.y << " " << _pan.z << std::endl;
-        std::cout << offset.x << " offset " << offset.y << " " << offset.z << std::endl;
-        std::cout << std::endl;
-        count++;
-    }
+    //if (count == 1) {
+    //    std::cout << _pan.x << " " << _pan.y << " " << _pan.z << std::endl;
+    //    std::cout << offset.x << " offset " << offset.y << " " << offset.z << std::endl;
+    //    std::cout << std::endl;
+    //    count++;
+    //}
     //std::cout << _pan.x << " " << _pan.y << " " << _pan.z << std::endl;
     //std::cout << offset.x << " offset " << offset.y << " " << offset.z << std::endl;
     target += _pan;
@@ -112,4 +112,6 @@ void Camera::setDefaultLocation(vec3 _cameraPosition, vec3 _cameraTarget) {
 void Camera::recoverDefaultLocation() {
     position = cameraPosition;
     target = cameraTarget;
+    fov = ONE_THIRD_PI;
+    aspect = 1.0;
 }
