@@ -18,7 +18,7 @@
 #define SCREEN_WIDTH 512
 #define SCREEN_HEIGHT 512
 #define FORM_WIDTH 260
-#define FORM_HEIGHT 380
+#define FORM_HEIGHT 700
 #define VALUE_WIDTH 120
 #define MARGIN 16
 #define PAD_WIDTH 32

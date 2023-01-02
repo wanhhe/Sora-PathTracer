@@ -10,4 +10,6 @@ public:
 
 private:
     MyGLCanvas* mCanvas;
+    Config* config;
+    Camera* camera;
 };
