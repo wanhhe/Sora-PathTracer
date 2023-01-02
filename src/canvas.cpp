@@ -2,7 +2,8 @@
 
 int count1 = 1;
 
-MyGLCanvas::MyGLCanvas(Widget* parent) : nanogui::GLCanvas(parent), hikari("../models/Reisalin_Stout/Reisalin_Stout.obj") {
+MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) : 
+    nanogui::GLCanvas(parent), hikari("../models/sara/sara.obj"), camera(_camera) {
     using namespace nanogui;
 
     //mShader.init(
@@ -10,24 +11,32 @@ MyGLCanvas::MyGLCanvas(Widget* parent) : nanogui::GLCanvas(parent), hikari("../m
     //    "a_simple_shader",
 
     //    /* Vertex shader */
-    //    "#version 330\n"
+    //    "#version 330 core\n"
+    //    "layout(location = 0) in vec3 aPos;\n"
+    //    "layout(location = 1) in vec3 aNormal;\n"
+    //    "layout(location = 2) in vec2 aTexCoords;\n"
+
+    //    "out vec2 TexCoords;\n"
     //    "uniform mat4 modelViewProj;\n"
-    //    "in vec3 position;\n"
-    //    "in vec3 color;\n"
-    //    "out vec4 frag_color;\n"
-    //    "void main() {\n"
-    //    "    frag_color = vec4(color, 1.0);\n"
-    //    "    gl_Position = modelViewProj * vec4(position, 1.0);\n"
-    //    "}",
+
+    //    "void main(){\n"
+    //        "TexCoords = aTexCoords;\n"
+    //        "gl_Position = modelViewProj * vec4(aPos, 1.0);\n"
+    //    "}\n",
 
     //    /* Fragment shader */
-    //    "#version 330\n"
-    //    "out vec4 color;\n"
-    //    "in vec4 frag_color;\n"
-    //    "void main() {\n"
-    //    "    color = frag_color;\n"
-    //    "}"
+    //    "#version 330 core\n"
+    //    "out vec4 FragColor;\n"
+
+    //    "in vec2 TexCoords;\n"
+
+    //    "uniform sampler2D texture_diffuse1;\n"
+
+    //    "void main(){\n"
+    //        "FragColor = texture(texture_diffuse1, TexCoords);\n"
+    //    "}\n"   
     //);
+
     mShader.init(
         /* An identifying name */
         "a_simple_shader",
@@ -39,11 +48,17 @@ MyGLCanvas::MyGLCanvas(Widget* parent) : nanogui::GLCanvas(parent), hikari("../m
         "layout(location = 2) in vec2 aTexCoords;\n"
 
         "out vec2 TexCoords;\n"
-        "uniform mat4 modelViewProj;\n"
+        "out vec3 FragPos;\n"
+        "out vec3 Normal;\n"
+        "uniform mat4 model;\n"
+        "uniform mat4 view;\n"
+        "uniform mat4 projection;\n"
 
         "void main(){\n"
-            "TexCoords = aTexCoords;\n"
-            "gl_Position = modelViewProj * vec4(aPos, 1.0);\n"
+        "   FragPos = vec3(model * vec4(aPos, 1.0));\n"
+        "   Normal = normalize(mat3(transpose(inverse(model))) * aNormal);\n"
+        "   TexCoords = aTexCoords;\n"
+        "   gl_Position = projection * view * vec4(FragPos, 1.0);\n"
         "}\n",
 
         /* Fragment shader */
@@ -51,40 +66,70 @@ MyGLCanvas::MyGLCanvas(Widget* parent) : nanogui::GLCanvas(parent), hikari("../m
         "out vec4 FragColor;\n"
 
         "in vec2 TexCoords;\n"
-
+        "in vec3 Normal;\n"
+        "in vec3 FragPos;\n"
+        "uniform vec3 lightColor;\n"
+        "uniform vec3 lightPos;\n"
+        "uniform vec3 viewPos;\n"
         "uniform sampler2D texture_diffuse1;\n"
 
         "void main(){\n"
-            "FragColor = texture(texture_diffuse1, TexCoords);\n"
+        "   vec4 kd = texture(texture_diffuse1, TexCoords);\n"
+        "   float ambientStrength = 0.1;\n"
+        "   vec3 ambient = ambientStrength * lightColor;\n"
+        "   vec3 lightDir = normalize(lightPos - FragPos);\n"
+        "   float diff = max(dot(Normal, lightDir), 0.0);\n"
+        "   vec3 diffuse = diff * lightColor;\n"
+        "   float specularStrength = 0.5;\n"
+        "   vec3 viewDir = normalize(viewPos - FragPos);\n"
+        "   vec3 reflectDir = reflect(-lightDir, Normal);\n"
+        "   float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);\n"
+        "   vec3 specular = specularStrength * spec * lightColor;\n"
+        "   FragColor = vec4(ambient + diffuse + specular, 1.0) * kd;\n"
         "}\n"
-
-        
     );
 
+    lightShader.init(
+        "light_shader",
 
-    //MatrixXu indices(3, 12); /* Draw a cube */
-    //indices.col(0) << 0, 1, 3;
-    //indices.col(1) << 3, 2, 1;
-    //indices.col(2) << 3, 2, 6;
-    //indices.col(3) << 6, 7, 3;
-    //indices.col(4) << 7, 6, 5;
-    //indices.col(5) << 5, 4, 7;
-    //indices.col(6) << 4, 5, 1;
-    //indices.col(7) << 1, 0, 4;
-    //indices.col(8) << 4, 0, 3;
-    //indices.col(9) << 3, 7, 4;
-    //indices.col(10) << 5, 6, 2;
-    //indices.col(11) << 2, 1, 5;
+        "#version 330 core\n"
+        "in vec3 position;\n"
+        "uniform mat4 lightMVP;\n"
+        "void main() {\n"
+        "   gl_Position = lightMVP * vec4(position, 1.0);\n"
+        "}\n",
 
-    //MatrixXf positions(3, 8);
-    //positions.col(0) << -0.5, 0.5, 0.5;
-    //positions.col(1) << -0.5, 0.5, -0.5;
-    //positions.col(2) << 0.5, 0.5, -0.5;
-    //positions.col(3) << 0.5, 0.5, 0.5;
-    //positions.col(4) << -0.5, -0.5, 0.5;
-    //positions.col(5) << -0.5, -0.5, -0.5;
-    //positions.col(6) << 0.5, -0.5, -0.5;
-    //positions.col(7) << 0.5, -0.5, 0.5;
+        "#version 330 core\n"
+        "out vec4 FragColor;\n"
+
+        "void main() {\n"
+        "   FragColor = vec4(1.0);\n"
+        "}\n"
+    );
+
+    MatrixXu indices(3, 12); /* Draw a cube */
+    indices.col(0) << 0, 1, 3;
+    indices.col(1) << 3, 2, 1;
+    indices.col(2) << 3, 2, 6;
+    indices.col(3) << 6, 7, 3;
+    indices.col(4) << 7, 6, 5;
+    indices.col(5) << 5, 4, 7;
+    indices.col(6) << 4, 5, 1;
+    indices.col(7) << 1, 0, 4;
+    indices.col(8) << 4, 0, 3;
+    indices.col(9) << 3, 7, 4;
+    indices.col(10) << 5, 6, 2;
+    indices.col(11) << 2, 1, 5;
+
+    MatrixXf positions(3, 8);
+    positions.col(0) << 2, 3, 3;
+    positions.col(1) << 2, 3, 2;
+    positions.col(2) << 3, 3, 2;
+    positions.col(3) << 3, 3, 3;
+    positions.col(4) << 2, 2, 3;
+    positions.col(5) << 2, 2, 2;
+    positions.col(6) << 3, 2, 2;
+    positions.col(7) << 3, 2, 3;
 
     //MatrixXf colors(3, 12);
     //colors.col(0) << 1, 0, 0;
@@ -99,8 +144,8 @@ MyGLCanvas::MyGLCanvas(Widget* parent) : nanogui::GLCanvas(parent), hikari("../m
     //colors.col(9) << 1, 0.5, 0;
     //colors.col(10) << 0.5, 1, 0;
     //colors.col(11) << 0.5, 1, 0.5;
+    
 
-    camera = new Camera(vec3(0.0f, 0.0f, 3.0f), vec3(0.f, 0.f, 0.f), 1.0f);
     //camera->cameraPos = vec3(0.0f, 0.0f, 3.0f);
     //camera->cameraFront = vec3(0.0f, 0.0f, -1.0f);
     //camera->cameraUp = vec3(0.0f, 1.0f, 0.0f);
@@ -109,15 +154,23 @@ MyGLCanvas::MyGLCanvas(Widget* parent) : nanogui::GLCanvas(parent), hikari("../m
     //camera->scaleSpeed = 0.15;
     //camera->sensitivity = 0.2;
 
+    translate = vec3(0.f);
+    scale = vec3(1.f);
     model = mat4(1.0f);
-
+    model = glm::translate(model, vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
     //mShader.bind();
  /*   mShader.uploadIndices(indices);
-
     mShader.uploadAttrib("position", positions);
     mShader.uploadAttrib("color", colors);*/
 
-    //std::cout << "shaderID " << mShader.getShaderID() << std::endl;
+    mShader.bind();
+    mShader.setUniform("viewPos", camera->position);
+    mShader.setUniform("lightPos", vec3(2.5, 2.5, 2.5));
+    mShader.setUniform("lightColor", vec3(1.0, 1.0, 1.0));
+
+    lightShader.bind();
+    lightShader.uploadIndices(indices);
+    lightShader.uploadAttrib("position", positions);
 }
 
 void MyGLCanvas::drawGL() {
@@ -126,7 +179,6 @@ void MyGLCanvas::drawGL() {
     mShader.bind();
 
     mat4 mvp;
-
     updateCamera();
     //std::cout << camera->position.x << " " << camera->position.y << " " << camera->position.z << std::endl;
     //std::cout << camera->target.x << " " << camera->target.y << " " << camera->target.z << std::endl;
@@ -137,41 +189,41 @@ void MyGLCanvas::drawGL() {
     //projection = glm::perspective(radians(camera->fov), 1.0f, 0.1f, 100.0f);
     //projection = glm::perspective(radians(45.f), 1.0f, 0.1f, 100.0f);
 
+    model[0][0] = 1.0f;
+    model[0][1] = 0.0f;
+    model[0][2] = 0.0f;
+    model[0][3] = 0.0f;
+    model[1][0] = 0.0f;
+    model[1][1] = 1.0f;
+    model[1][2] = 0.0f;
+    model[1][3] = 0.0f;
+    model[2][0] = 0.0f;
+    model[2][1] = 0.0f;
+    model[2][2] = 1.0f;
+    model[2][3] = 0.0f;
+    model[3][0] = 0.0f;
+    model[3][1] = 0.0f;
+    model[3][2] = 0.0f;
+    model[3][3] = 1.0f;
+    model = glm::translate(model, translate);
+    model = glm::scale(model, scale);
     mvp = projection * view * model;
 
-    mShader.setUniform("modelViewProj", mvp);
+    mShader.setUniform("model", model);
+    mShader.setUniform("view", view);
+    mShader.setUniform("projection", projection);
+    glEnable(GL_DEPTH_TEST);
+    hikari.draw(mShader);
+    glDisable(GL_DEPTH_TEST);
 
-
+    lightShader.bind();
+    lightShader.setUniform("lightMVP", projection * view);
     glEnable(GL_DEPTH_TEST);
     /* Draw 12 triangles starting at index 0 */
     //mShader.drawIndexed(GL_TRIANGLES, 0, 12);
-    hikari.draw(mShader);
+    lightShader.drawIndexed(GL_TRIANGLES, 0, 12);
     glDisable(GL_DEPTH_TEST);
 }
-
-//bool MyGLCanvas::keyboardEvent(int key, int scancode, int action, int modifiers) {
-//    /*std::cout << camera->cameraPos.x << " " << camera->cameraPos.y << " " << camera->cameraPos.z << std::endl;
-//    if (key == GLFW_KEY_W && action == GLFW_PRESS) {
-//        std::cout << "gl press override" << std::endl;
-//        camera->cameraPos += camera->translateSpeed * camera->cameraFront;
-//        return true;
-//    }
-//    else if (key == GLFW_KEY_S && action == GLFW_PRESS) {
-//        camera->cameraPos -= camera->translateSpeed * camera->cameraFront;
-//        return true;
-//    }
-//    else if (key == GLFW_KEY_A && action == GLFW_PRESS) {
-//        camera->cameraPos -= normalize(cross(camera->cameraFront, camera->cameraUp)) * camera->translateSpeed;
-//        return true;
-//    }
-//    else if (key == GLFW_KEY_D && action == GLFW_PRESS) {
-//        camera->cameraPos += normalize(cross(camera->cameraFront, camera->cameraUp)) * camera->translateSpeed;
-//        return true;
-//    }*/
-//    //return false;
-//
-//    return true;
-//}
 
 bool MyGLCanvas::scrollEvent(const nanogui::Vector2i& p, const nanogui::Vector2f& rel) {
     // p是鼠标位置，rel是鼠标的滚动，(0,1)是前滚，(0,-1)是后滚
@@ -372,16 +424,6 @@ bool MyGLCanvas::mouseDragEvent(const nanogui::Vector2i& p, const nanogui::Vecto
     camera->cursor.y = p.y();
     return true;
 }
-
-//bool MyGLCanvas::keyboardEvent(int key, int scancode, int action, int modifiers) {
-//    std::cout << "keyboard" << std::endl;
-//    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-//        std::cout << "recover" << std::endl;
-//        camera->recoverDefaultLocation();
-//        return true;
-//    }
-//    return false;
-//}
 
 bool MyGLCanvas::mouseMotionEvent(const nanogui::Vector2i& p, const nanogui::Vector2i& rel, int button, int modifiers) {
     camera->cursor = vec2(p.x(), p.y());

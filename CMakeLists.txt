@@ -41,6 +41,7 @@ add_executable(${PROJECT_NAME}
     include/mesh.h
     include/canvas.h
     include/example.h
+    #include/shader.h
 
     # sources
     src/main.cpp
@@ -58,6 +59,7 @@ add_executable(${PROJECT_NAME}
     src/canvas.cpp
     src/mesh.cpp
     src/model.cpp
+    #src/shader.cpp
 )
 
 find_package(Threads REQUIRED)
