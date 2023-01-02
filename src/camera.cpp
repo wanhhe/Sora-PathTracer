@@ -112,6 +112,5 @@ void Camera::setDefaultLocation(vec3 _cameraPosition, vec3 _cameraTarget) {
 void Camera::recoverDefaultLocation() {
     position = cameraPosition;
     target = cameraTarget;
-    fov = ONE_THIRD_PI;
     aspect = 1.0;
 }
