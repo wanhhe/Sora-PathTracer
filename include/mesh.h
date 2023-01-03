@@ -28,7 +28,7 @@ public:
 
 	Mesh(vector<Vertex> _vertices, vector<unsigned int> _indices, vector<Texture> _textures);
 	void draw(nanogui::GLShader shader);
-
+	
 private:
 	unsigned int VAO, VBO, EBO;
 	void setupMesh();
