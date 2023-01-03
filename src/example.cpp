@@ -1,40 +1,49 @@
 #include "example.h"
 
 ExampleApplication::ExampleApplication() : nanogui::Screen(Eigen::Vector2i(1920, 1080), "Sora PathTracer", true) {
+ //ExampleApplication::ExampleApplication() : nanogui::Screen(nanogui::Vector2i(1920, 1080), "Sora PathTracer", true) {
     using namespace nanogui;
 
     config = new Config(1, DIFFUSE, 1, 0.2, SAH, OPENGL);
     camera = new Camera(vec3(0.0f, 0.0f, 3.0f), vec3(0.f, 0.f, 0.f), 1.0f);
 
+    TabWidget* tabWidget = this->add<TabWidget>();
+    auto layer = tabWidget->createTab("Tab Name");
+    layer->setLayout(new GroupLayout());
+    new Label(layer, "Some Label");
+    //TabHeader* tabHeader = new TabHeader(this);
+    //tabHeader->addTab("test");
+    
+
     FormHelper* form = new FormHelper(this);
-    ref<Window> setting = form->addWindow(Vector2i(MARGIN, MARGIN), "Settings");
+    ref<Window> setting = form->addWindow(Vector2i(MARGIN, 3 * MARGIN), "Settings");
     setting->setFixedWidth(FORM_WIDTH);
     setting->setFixedHeight(FORM_HEIGHT);
 
-    // äÖÈ¾ÉèÖÃ
+    // æ¸²æŸ“è®¾ç½®
     form->addGroup("Rendering Settings");
-    // äÖÈ¾·½Ê½
+    // æ¸²æŸ“æ–¹å¼
     auto vRenderMode = form->addVariable("RenderMode", config->renderMode);
     vRenderMode->setFixedWidth(VALUE_WIDTH);
     vRenderMode->setItems({ "Naive", "OpenGL" });
     vRenderMode->setTooltip("if choose OpenGL, the OpenGL environment is needed.");
 
-    // ¿ÉÑ¡ÔñµÄÄ£ÐÍ
+    // å¯é€‰æ‹©çš„æ¨¡åž‹
 
-    // ²ÉÑù´ÎÊý
+    // é‡‡æ ·æ¬¡æ•°
     auto vSampleCount = form->addVariable("SPP", config->sampleCount);
     vSampleCount->setFixedWidth(VALUE_WIDTH);
     vSampleCount->setSpinnable(true);
     vSampleCount->setFormat("[1-9][0-9]*");
     vSampleCount->setMinMaxValues(1, 2048);
 
-    // äÖÈ¾²ÄÖÊ
+    // æ¸²æŸ“æè´¨
     auto vMaterial = form->addVariable("Material", config->material, true);
     vMaterial->setFixedWidth(VALUE_WIDTH);
     vMaterial->setItems({ "Diffuse", "Mirror", "Microfacet" });
     vMaterial->setTooltip("if set to Diffuse, the Roughness will be ignored; if set to Microfacet, the Sample Way will be ignored.");
 
-    // ´Ö²Ú¶È
+    // ç²—ç³™åº¦
     auto vRoughness = form->addVariable("Roughness", config->roughness, false);
     vRoughness->setFixedWidth(VALUE_WIDTH);
     vRoughness->setSpinnable(true);
@@ -42,22 +51,22 @@ ExampleApplication::ExampleApplication() : nanogui::Screen(Eigen::Vector2i(1920,
     vRoughness->setValueIncrement(0.01);
     vRoughness->setTooltip("Roughness value for microfacet material");
 
-    // ÓÅ»¯ÉèÖÃ
+    // ä¼˜åŒ–è®¾ç½®
     form->addGroup("Optimization Settings");
-    // Ïß³ÌÊý
+    // çº¿ç¨‹æ•°
     auto vThreadCount = form->addVariable("Thread Count", config->threadCount, true);
     vThreadCount->setFixedWidth(VALUE_WIDTH);
     vThreadCount->setSpinnable(true);
     vThreadCount->setFormat("[1-9][0-9]*");
     vThreadCount->setMinMaxValues(1, 16);
 
-    // ¼ÓËÙ½á¹¹
+    // åŠ é€Ÿç»“æž„
     auto vAccelStructure = form->addVariable("Accel Strcuture", config->accelStructure, true);
     vAccelStructure->setFixedWidth(VALUE_WIDTH);
     vAccelStructure->setItems({ "None", "BVH", "SAH" });
 
 
-    // Ïà»úÉèÖÃ
+    // ç›¸æœºè®¾ç½®
     form->addGroup("Camera Settings");
     auto vOriginPositionX = form->addVariable("originPosition.X", camera->cameraPosition.x, true);
     vOriginPositionX->setFixedWidth(VALUE_WIDTH);
@@ -88,9 +97,8 @@ ExampleApplication::ExampleApplication() : nanogui::Screen(Eigen::Vector2i(1920,
     vAspect->setSpinnable(true);
     vAspect->setMinValue(0.1f);
 
-    // ÒÑÌí¼ÓµÄÄ£ÐÍÁÐ±í
     Window* renderWindow = new Window(this, "Render Result");
-    renderWindow->setPosition(Vector2i(FORM_WIDTH + 2 * MARGIN, MARGIN));
+    renderWindow->setPosition(Vector2i(FORM_WIDTH + 2 * MARGIN, 3 * MARGIN));
     renderWindow->setLayout(new GroupLayout());
 
     mCanvas = new MyGLCanvas(renderWindow, camera);
@@ -98,13 +106,13 @@ ExampleApplication::ExampleApplication() : nanogui::Screen(Eigen::Vector2i(1920,
     mCanvas->setSize({ SCREEN_WIDTH, SCREEN_HEIGHT });
 
     FormHelper* form1 = new FormHelper(this);
-    ref<Window> setting1 = form1->addWindow(Vector2i(FORM_WIDTH + 5 * MARGIN + SCREEN_WIDTH, MARGIN), "Settings1");
+    ref<Window> setting1 = form1->addWindow(Vector2i(FORM_WIDTH + 5 * MARGIN + SCREEN_WIDTH, 3 * MARGIN), "Settings1");
     setting->setFixedWidth(FORM_WIDTH);
     setting->setFixedHeight(FORM_HEIGHT);
 
-    // Ä£ÐÍÉèÖÃ
+    // æ¨¡åž‹è®¾ç½®
     form1->addGroup("Model Settings");
-    // Ëõ·Å
+    // ç¼©æ”¾
     auto vScaleX = form1->addVariable("Scale.X", mCanvas->scale.x, true);
     vScaleX->setFixedWidth(VALUE_WIDTH);
     vScaleX->setSpinnable(true);
@@ -123,7 +131,7 @@ ExampleApplication::ExampleApplication() : nanogui::Screen(Eigen::Vector2i(1920,
     vScaleZ->setMinValue(0.1f);
     vScaleZ->setValueIncrement(0.1f);
 
-    // Æ½ÒÆ
+    // å¹³ç§»
     auto vTranslationX = form1->addVariable("Translation.X", mCanvas->translate.x, true);
     vTranslationX->setFixedWidth(VALUE_WIDTH);
     vTranslationX->setSpinnable(true);
@@ -138,7 +146,7 @@ ExampleApplication::ExampleApplication() : nanogui::Screen(Eigen::Vector2i(1920,
     vTranslationZ->setFixedWidth(VALUE_WIDTH);
     vTranslationZ->setSpinnable(true);
     vTranslationZ->setValueIncrement(1.f);
-    // Ðý×ª
+    // æ—‹è½¬
     //auto vRotateX = form->addVariable("Rotate.X", true);
     //auto vRotateY = form->addVariable("Rotate.Y", true);
     //auto vRotateZ = form->addVariable("Rotate.Z", true);
@@ -155,7 +163,31 @@ bool ExampleApplication::keyboardEvent(int key, int scancode, int action, int mo
         return true;
     }
     return false;
+    //if (Screen::keyboardEvent(key, scancode, action, modifiers))
+    //    return true;
+    //if (nanogui::isKeyboardKeyEscape(key) && nanogui::isKeyboardActionPress(action)) {
+    //    setVisible(false);
+    //    return true;
+    //}
 }
+
+//bool ExampleApplication::keyCallbackEvent(int key, int scancode, int action, int mods) {
+//    std::cout << "he " << key << std::endl;
+//    //if (Screen::keyboardEvent(key, scancode, action, modifiers)) {
+//    //    return true;
+//    //}
+//    //if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+//    //    setVisible(false);
+//    //    return true;
+//    //}
+//    if (Screen::keyCallbackEvent(key, scancode, action, mods))
+//        return true;
+//    if (nanogui::isKeyboardKeyEscape(key) && nanogui::isKeyboardActionPress(action)) {
+//        setVisible(false);
+//        return true;
+//    }
+//    return false;
+//}
 
 void ExampleApplication::draw(NVGcontext* ctx) {
     /* Draw the user interface */
