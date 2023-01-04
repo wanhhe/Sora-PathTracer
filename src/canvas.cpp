@@ -3,7 +3,7 @@
 int count1 = 1;
 
 MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) : 
-    nanogui::GLCanvas(parent), hikari("../models/sara/sara.obj"), camera(_camera) {
+    nanogui::GLCanvas(parent), camera(_camera) {
     using namespace nanogui;
 
     //mShader.init(
@@ -54,7 +54,7 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
         "uniform mat4 view;\n"
         "uniform mat4 projection;\n"
 
-        "void main(){\n"
+        "void main() {\n"
         "   FragPos = vec3(model * vec4(aPos, 1.0));\n"
         "   Normal = normalize(mat3(transpose(inverse(model))) * aNormal);\n"
         "   TexCoords = aTexCoords;\n"
@@ -89,47 +89,47 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
         "}\n"
     );
 
-    lightShader.init(
-        "light_shader",
+    //lightShader.init(
+    //    "light_shader",
 
-        "#version 330 core\n"
-        "in vec3 position;\n"
-        "uniform mat4 lightMVP;\n"
-        "void main() {\n"
-        "   gl_Position = lightMVP * vec4(position, 1.0);\n"
-        "}\n",
+    //    "#version 330 core\n"
+    //    "in vec3 position;\n"
+    //    "uniform mat4 lightMVP;\n"
+    //    "void main() {\n"
+    //    "   gl_Position = lightMVP * vec4(position, 1.0);\n"
+    //    "}\n",
 
-        "#version 330 core\n"
-        "out vec4 FragColor;\n"
+    //    "#version 330 core\n"
+    //    "out vec4 FragColor;\n"
 
-        "void main() {\n"
-        "   FragColor = vec4(1.0);\n"
-        "}\n"
-    );
+    //    "void main() {\n"
+    //    "   FragColor = vec4(1.0);\n"
+    //    "}\n"
+    //);
 
-    MatrixXu indices(3, 12); /* Draw a cube */
-    indices.col(0) << 0, 1, 3;
-    indices.col(1) << 3, 2, 1;
-    indices.col(2) << 3, 2, 6;
-    indices.col(3) << 6, 7, 3;
-    indices.col(4) << 7, 6, 5;
-    indices.col(5) << 5, 4, 7;
-    indices.col(6) << 4, 5, 1;
-    indices.col(7) << 1, 0, 4;
-    indices.col(8) << 4, 0, 3;
-    indices.col(9) << 3, 7, 4;
-    indices.col(10) << 5, 6, 2;
-    indices.col(11) << 2, 1, 5;
+    //MatrixXu indices(3, 12); /* Draw a cube */
+    //indices.col(0) << 0, 1, 3;
+    //indices.col(1) << 3, 2, 1;
+    //indices.col(2) << 3, 2, 6;
+    //indices.col(3) << 6, 7, 3;
+    //indices.col(4) << 7, 6, 5;
+    //indices.col(5) << 5, 4, 7;
+    //indices.col(6) << 4, 5, 1;
+    //indices.col(7) << 1, 0, 4;
+    //indices.col(8) << 4, 0, 3;
+    //indices.col(9) << 3, 7, 4;
+    //indices.col(10) << 5, 6, 2;
+    //indices.col(11) << 2, 1, 5;
 
-    MatrixXf positions(3, 8);
-    positions.col(0) << 2, 3, 3;
-    positions.col(1) << 2, 3, 2;
-    positions.col(2) << 3, 3, 2;
-    positions.col(3) << 3, 3, 3;
-    positions.col(4) << 2, 2, 3;
-    positions.col(5) << 2, 2, 2;
-    positions.col(6) << 3, 2, 2;
-    positions.col(7) << 3, 2, 3;
+    //MatrixXf positions(3, 8);
+    //positions.col(0) << 2, 3, 3;
+    //positions.col(1) << 2, 3, 2;
+    //positions.col(2) << 3, 3, 2;
+    //positions.col(3) << 3, 3, 3;
+    //positions.col(4) << 2, 2, 3;
+    //positions.col(5) << 2, 2, 2;
+    //positions.col(6) << 3, 2, 2;
+    //positions.col(7) << 3, 2, 3;
 
     //MatrixXf colors(3, 12);
     //colors.col(0) << 1, 0, 0;
@@ -154,8 +154,16 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     //camera->scaleSpeed = 0.15;
     //camera->sensitivity = 0.2;
 
-    translate = vec3(0.f);
-    scale = vec3(1.f);
+    modelList.emplace_back(new Model("..\\models\\sara\\sara.obj"));
+    //modelList.emplace_back(new Model("../models/sara/sara.obj"));
+    mShader.bind();
+    mShader.setUniform("viewPos", camera->position);
+    mShader.setUniform("lightPos", vec3(2.5, 2.5, 2.5));
+    mShader.setUniform("lightColor", vec3(1.0, 1.0, 1.0));
+    shaderList.emplace_back(mShader);
+
+    //translate = vec3(0.f);
+    //scale = vec3(1.f);
     model = mat4(1.0f);
     model = glm::translate(model, vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
     //mShader.bind();
@@ -163,14 +171,9 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     mShader.uploadAttrib("position", positions);
     mShader.uploadAttrib("color", colors);*/
 
-    mShader.bind();
-    mShader.setUniform("viewPos", camera->position);
-    mShader.setUniform("lightPos", vec3(2.5, 2.5, 2.5));
-    mShader.setUniform("lightColor", vec3(1.0, 1.0, 1.0));
-
-    lightShader.bind();
-    lightShader.uploadIndices(indices);
-    lightShader.uploadAttrib("position", positions);
+    //lightShader.bind();
+    //lightShader.uploadIndices(indices);
+    //lightShader.uploadAttrib("position", positions);
 }
 
 void MyGLCanvas::drawGL() {
@@ -212,17 +215,43 @@ void MyGLCanvas::drawGL() {
     mShader.setUniform("model", model);
     mShader.setUniform("view", view);
     mShader.setUniform("projection", projection);
-    glEnable(GL_DEPTH_TEST);
-    hikari.draw(mShader);
-    glDisable(GL_DEPTH_TEST);
-
-    lightShader.bind();
-    lightShader.setUniform("lightMVP", projection * view);
-    glEnable(GL_DEPTH_TEST);
+    for (int i = 0; i < modelList.size(); i++) {
+        model[0][0] = 1.0f;
+        model[0][1] = 0.0f;
+        model[0][2] = 0.0f;
+        model[0][3] = 0.0f;
+        model[1][0] = 0.0f;
+        model[1][1] = 1.0f;
+        model[1][2] = 0.0f;
+        model[1][3] = 0.0f;
+        model[2][0] = 0.0f;
+        model[2][1] = 0.0f;
+        model[2][2] = 1.0f;
+        model[2][3] = 0.0f;
+        model[3][0] = 0.0f;
+        model[3][1] = 0.0f;
+        model[3][2] = 0.0f;
+        model[3][3] = 1.0f;
+        model = glm::translate(model, modelList[i]->translate);
+        model = glm::scale(model, modelList[i]->scale);
+        shaderList[modelList[i]->shaderIndex].setUniform("model", model);
+        shaderList[modelList[i]->shaderIndex].setUniform("view", view);
+        shaderList[modelList[i]->shaderIndex].setUniform("projection", projection);
+        glEnable(GL_DEPTH_TEST);
+        modelList[i]->draw(mShader);
+        glDisable(GL_DEPTH_TEST);
+    }
+    //lightShader.bind();
+    //lightShader.setUniform("lightMVP", projection * view);
+    //glEnable(GL_DEPTH_TEST);
     /* Draw 12 triangles starting at index 0 */
     //mShader.drawIndexed(GL_TRIANGLES, 0, 12);
-    lightShader.drawIndexed(GL_TRIANGLES, 0, 12);
-    glDisable(GL_DEPTH_TEST);
+    //lightShader.drawIndexed(GL_TRIANGLES, 0, 12);
+    //glDisable(GL_DEPTH_TEST);
+}
+
+void MyGLCanvas::addModel(const string& path) {
+    modelList.emplace_back(new Model(path));
 }
 
 bool MyGLCanvas::scrollEvent(const nanogui::Vector2i& p, const nanogui::Vector2f& rel) {
@@ -483,10 +512,11 @@ void MyGLCanvas::updateCamera() {
 }
 
 bool MyGLCanvas::keyboardEvent(int key, int scancode, int action, int modifiers) {
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        setVisible(false);
-        return false;
-    }
+    //std::cout << "debgu2" << std::endl;
+    //if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+    //    setVisible(false);
+    //    return false;
+    //}
     if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
         camera->recoverDefaultLocation();
     }

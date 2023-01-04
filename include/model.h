@@ -11,6 +11,9 @@ class Model {
 public:
 	Model(const string& path);
 	void draw(nanogui::GLShader& shader);
+	vec3 translate;
+	vec3 scale;
+	int shaderIndex;
 
 private:
 	vector<Mesh> meshes;

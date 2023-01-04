@@ -1,5 +1,5 @@
-#include <nanogui/nanogui.h>
-
+#include <nanogui/glcanvas.h>
+#include <nanogui/glutil.h>
 #include "camera.h"
 #include "model.h"
 
@@ -114,13 +114,15 @@ public:
     vec3 translate;
     vec3 scale;
 
+    void addModel(const string& path);
+
 private:
+    vector<nanogui::GLShader> shaderList;
     nanogui::GLShader mShader;
     nanogui::GLShader lightShader;
     mat4 model;
     mat4 view;
     mat4 projection;
     Camera* camera;
-    Model hikari;
-    
+    vector<Model*> modelList;
 };

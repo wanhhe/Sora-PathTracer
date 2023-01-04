@@ -6,6 +6,9 @@
 
 Model::Model(const string& path) {
 	loadModel(path);
+	shaderIndex = 0;
+	translate = vec3(0.f);
+	scale = vec3(1.f);
 }
 
 void Model::draw(nanogui::GLShader& shader) {
@@ -27,7 +30,7 @@ void Model::loadModel(const string& path) {
 		return;
 	}
 
-	directory = path.substr(0, path.find_last_of('/'));
+	directory = path.substr(0, path.find_last_of('\\'));
 	processNode(scene->mRootNode, scene);
 }
 
@@ -123,7 +126,7 @@ vector<Texture> Model::loadMaterialTextures(aiMaterial* _material, aiTextureType
 
 unsigned int Model::textureFromFile(const char* path, const string& directory, bool gamma) {
 	string filename = string(path);
-	filename = directory + '/' + filename;
+	filename = directory + '\\' + filename;
 
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
