@@ -116,9 +116,9 @@ public:
     vec3 translate;
     vec3 scale;
 
-    void addModel(const string& path, const string& name);
+    string addModel(const string& path, const string& name);
 
-    void addLight(const string& name, int type, vec3 _position, vec3 _color, vec3 _intensity);
+    string addLight(const string& name, int type, vec3 _position, vec3 _color, vec3 _intensity);
 
 private:
     vector<nanogui::GLShader> shaderList;

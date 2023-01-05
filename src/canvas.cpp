@@ -250,49 +250,59 @@ void MyGLCanvas::drawGL() {
     //glDisable(GL_DEPTH_TEST);
 }
 
-void MyGLCanvas::addModel(const string& path, const string& name) {
-    if (name == "") {
-        modelList.emplace_back(new Model(path, "untitle" + untitleModel));
+string MyGLCanvas::addModel(const string& path, const string& name) {
+    string id;
+    if (name == "" || name == "untitle") {
+        id = "untitle." + untitleModel;
+        modelList.emplace_back(new Model(path, id));
         untitleModel++;
     }
     else {
         int num = 0;
         string realname = name.substr(0, name.find_last_of('.'));
         for (int i = 0; i < modelList.size(); i++) {
-            if (modelList[i]->name.substr(0, name.find_last_of('.')) == realname) {
+            if (modelList[i]->name.substr(0, modelList[i]->name.find_last_of('.')) == realname) {
                 num++;
             }
         }
         if (num > 0) {
-            modelList.emplace_back(new Model(path, name + "." + std::to_string(num)));
+            id = realname + "." + std::to_string(num);
+            modelList.emplace_back(new Model(path, id));
         }
         else {
+            id = name;
             modelList.emplace_back(new Model(path, name));
         }
     }
+    return id;
 }
 
-void MyGLCanvas::addLight(const string& name, int type, vec3 _position, vec3 _color, vec3 _intensity) {
+string MyGLCanvas::addLight(const string& name, int type, vec3 _position, vec3 _color, vec3 _intensity) {
     //if (type < 0 || type > lightShaderList.size()) type = 0;
-    if (name == "") {
-        lightList.emplace_back(new Light("untitle." + untitleLight, type, _position, _color, _intensity));
+    string id;
+    if (name == "" || name == "untitle") {
+        id = "untitle." + untitleLight;
+        lightList.emplace_back(new Light(id, type, _position, _color, _intensity));
         untitleLight++;
     }
     else {
         int num = 0;
         string realname = name.substr(0, name.find_last_of('.'));
         for (int i = 0; i < modelList.size(); i++) {
-            if (lightList[i]->name.substr(0, name.find_last_of('.')) == realname) {
+            if (lightList[i]->name.substr(0, lightList[i]->name.find_last_of('.')) == realname) {
                 num++;
             }
         }
         if (num > 0) {
-            lightList.emplace_back(new Light(name + "." + std::to_string(num), type, _position, _color, _intensity));
+            id = realname + "." + std::to_string(num);
+            lightList.emplace_back(new Light(id, type, _position, _color, _intensity));
         }
         else {
+            id = name;
             lightList.emplace_back(new Light(name, type, _position, _color, _intensity));
         }
     }
+    return id;
 }
 
 bool MyGLCanvas::scrollEvent(const nanogui::Vector2i& p, const nanogui::Vector2f& rel) {
