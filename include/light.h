@@ -3,14 +3,10 @@
 
 #include "common.h"
 
-enum LightShapeEnum {
-	SQUARE = 0,
-	CIRCULAR
-};
-
 class Light {
 public:
 	Light() {
+		name = "";
 		position = vec3(-2.f);
 		color = vec3(1.0f);
 		intensity = vec3(10.f);
@@ -21,7 +17,7 @@ public:
 		radius = 1.f;
 	}
 	// 默认不环绕，方形
-	Light(vec3 _position, vec3 _color, vec3 _intensity);
+	Light(const string& _name, int _type, vec3 _position, vec3 _color, vec3 _intensity);
 	vec3 position;
 	vec3 color;
 	vec3 intensity;
@@ -34,6 +30,11 @@ public:
 	// 光源形状
 	float radius;
 	LightShapeEnum shape;
+
+	// 光源名称
+	string name;
+	// 光源类型
+	int type;
 };
 
 #endif // !PATHTRACER_LIGHT_H

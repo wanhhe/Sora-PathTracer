@@ -68,6 +68,17 @@ enum RenderModeEnum {
     OPENGL
 };
 
+enum LightTypeEnum {
+    POINT = 0,
+    FLASH,
+    AMBIENT
+};
+
+enum LightShapeEnum {
+    SQUARE = 0,
+    CIRCULAR
+};
+
 typedef struct Config {
     int sampleCount;
     MaterialEnum material;

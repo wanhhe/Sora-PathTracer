@@ -2,6 +2,7 @@
 #include <nanogui/glutil.h>
 #include "camera.h"
 #include "model.h"
+#include "light.h"
 
 const string PhongVertexShader =
 "#version 330 core\n"
@@ -85,6 +86,7 @@ const string BlinnPhongFragShader =
 "}\n";
 
 
+
 class MyGLCanvas : public nanogui::GLCanvas {
 public:
     MyGLCanvas(Widget* parent, Camera* _camera);
@@ -114,10 +116,13 @@ public:
     vec3 translate;
     vec3 scale;
 
-    void addModel(const string& path);
+    void addModel(const string& path, const string& name);
+
+    void addLight(const string& name, int type, vec3 _position, vec3 _color, vec3 _intensity);
 
 private:
     vector<nanogui::GLShader> shaderList;
+    vector<nanogui::GLShader> lightShaderList;
     nanogui::GLShader mShader;
     nanogui::GLShader lightShader;
     mat4 model;
@@ -125,4 +130,7 @@ private:
     mat4 projection;
     Camera* camera;
     vector<Model*> modelList;
+    vector<Light*> lightList;
+    int untitleModel;
+    int untitleLight;
 };
