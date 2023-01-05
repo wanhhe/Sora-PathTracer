@@ -4,11 +4,12 @@
 
 #pragma comment(lib, "libassimp.dll.a")
 
-Model::Model(const string& path) {
+Model::Model(const string& path, const string& _name) {
 	loadModel(path);
 	shaderIndex = 0;
 	translate = vec3(0.f);
 	scale = vec3(1.f);
+	name = _name;
 }
 
 void Model::draw(nanogui::GLShader& shader) {

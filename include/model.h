@@ -9,10 +9,12 @@
 
 class Model {
 public:
-	Model(const string& path);
+	Model(const string& path, const string& _name);
 	void draw(nanogui::GLShader& shader);
+
 	vec3 translate;
 	vec3 scale;
+	string name;
 	int shaderIndex;
 
 private:
