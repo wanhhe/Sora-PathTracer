@@ -288,7 +288,7 @@ string MyGLCanvas::addLight(const string& name, int type, vec3 _position, vec3 _
     else {
         int num = 0;
         string realname = name.substr(0, name.find_last_of('.'));
-        for (int i = 0; i < modelList.size(); i++) {
+        for (int i = 0; i < lightList.size(); i++) {
             if (lightList[i]->name.substr(0, lightList[i]->name.find_last_of('.')) == realname) {
                 num++;
             }
@@ -303,6 +303,17 @@ string MyGLCanvas::addLight(const string& name, int type, vec3 _position, vec3 _
         }
     }
     return id;
+}
+
+Light* MyGLCanvas::findLight(const string& id) {
+    for (int i = 0; i < lightList.size(); i++) {
+        if (lightList[i]->name == id) return lightList[i];
+    }
+    return nullptr;
+}
+
+Light* MyGLCanvas::firstLight() {
+    return lightList[0];
 }
 
 bool MyGLCanvas::scrollEvent(const nanogui::Vector2i& p, const nanogui::Vector2f& rel) {

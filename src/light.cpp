@@ -1,6 +1,7 @@
 #include "light.h"
 
 Light::Light(const string& _name, int _type, vec3 _position, vec3 _color, vec3 _intensity) {
+	std::cout << "diao" << std::endl;
 	name = _name;
 	position = _position;
 	color = _color;

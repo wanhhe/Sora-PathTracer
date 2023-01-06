@@ -120,6 +120,10 @@ public:
 
     string addLight(const string& name, int type, vec3 _position, vec3 _color, vec3 _intensity);
 
+    Light* findLight(const string& id);
+
+    Light* firstLight();
+
 private:
     vector<nanogui::GLShader> shaderList;
     vector<nanogui::GLShader> lightShaderList;

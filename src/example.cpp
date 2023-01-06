@@ -23,7 +23,10 @@ void toggleAddModelWnd(ExampleApplication* _screen, bool show) {
         wnd.button(Caption{ "Create" },
             FixedSize{ 60, 30 },
             ButtonCallback{ [&, _screen] {
-                _screen->mCanvas->addModel(text.value(), name.value());
+                string item = _screen->mCanvas->addModel(text.value(), name.value());
+                Listbox* model_list = _screen->findWidget<Listbox>("#model_list");
+                model_list->addItem(item, item);
+                _screen->performLayout();
               wnd.dispose();
             } });
         wnd.button(Caption{ "Cancle" },
@@ -138,7 +141,10 @@ void toggleAddLightWnd(ExampleApplication* screen, bool show) {
         wnd.button(Caption{ "Create" },
             FixedSize{ 60, 30 },
             ButtonCallback{ [&, screen] {
-                //screen->mCanvas->addLight(name.value(), type.selectedIndex(), vec3(positionX.value(), positionY.value(), positionY.value()), vec3(re.value() / 255.f, ge.value() / 255.f, be.value() / 255.f), vec3(0.5f));
+                string item = screen->mCanvas->addLight(name.value(), type.selectedIndex(), vec3(positionX.value(), positionY.value(), positionZ.value()), vec3(re.value() / 255.f, ge.value() / 255.f, be.value() / 255.f), vec3(0.5f));
+                Listbox* light_list = screen->findWidget<Listbox>("#light_list");
+                light_list->addItem(item, item);
+                screen->performLayout();
               wnd.dispose();
             } });
     }
@@ -288,166 +294,6 @@ void toggleTreeView(nanogui::Screen* screen, bool show)
         treeview->setVisible(show);
     }
 }
-
-//void createAllWidgetsDemo(nanogui::Screen* screen) {
-//    using namespace nanogui;
-//    Window& dw = screen->window(WidgetStretchLayout{ Orientation::Vertical },
-//        Caption{ "All widgets demo" },
-//        Position{ 725, 350 },
-//        FixedSize{ 400, 400 });
-//
-//    dw.submenu("File")
-//        .item("(dummy item)", []() {})
-//        .item("New", "Ctrl+N", [screen]() { screen->msgdialog(DialogTitle{ "New" }, DialogMessage{ "New Clicked!" }); })
-//        .item("Very larget text", [screen]() { screen->msgdialog(DialogTitle{ "Open" }, DialogMessage{ "New Clicked!" }); })
-//        .item("Save", [screen]() { screen->msgdialog(DialogTitle{ "Save" }, DialogMessage{ "New Clicked!" }); });
-//    dw.submenu("File").item("(dummy item)").setEnabled(false);
-//    dw.submenu("File").item("Save").setShortcut("Ctrl+S");
-//
-//    auto toggleVisible = [screen](const std::string& /*wname*/, bool& enabled, bool& checked) {
-//        enabled = true;
-//        auto* w = screen->findWidgetGlobal("#console_wnd");
-//        checked = (w && w->visible());
-//    };
-//    dw.submenu("Examples")
-//        .item("Global menu", [screen](bool v) { toggleMainMenu(screen, v); })
-//        .item("Console", [screen](bool v) { toggleConsoleWnd(screen, v); }, [=](bool& e, bool& c) { toggleVisible("#console_wnd", e, c); })
-//        .item("Log", [screen](bool v) { toggleLogWnd(screen, v); }, [=](bool& e, bool& c) { toggleVisible("#log_wnd", e, c); })
-//        .item("Simple layout", [screen](bool v) { toggleSimpleLayoutWnd(screen, v); }, [=](bool& e, bool& c) { toggleVisible("#simple_layout_wnd", e, c); })
-//        .item("Tree view", [screen](bool v) { toggleTreeView(screen, v); }, [=](bool& e, bool& c) { toggleVisible("#tree_view_wnd", e, c); });
-//
-//    dw.submenu("Help");
-//
-//    auto& pw = dw.vscrollpanel(RelativeSize{ 1.f, 1.f }).vstack(2, 2);
-//
-//    auto& iocfg = pw.panel(Caption{ "Configuration" }, WindowCollapsed{ true });
-//    auto& nav = iocfg.panel(Caption{ "Configuration" }, WindowCollapsed{ true }, PanelHighlightHeader{ false });
-//    auto gs = [screen] { return screen->theme(); };
-//    nav.checkbox(Caption{ "theme.nav.mouse.enable" }, BoolObservable{ [gs] {return gs()->nav.mouse.enable; },
-//                                                                      [gs](bool v) { gs()->nav.mouse.enable = v; } });
-//    nav.checkbox(Caption{ "theme.nav.mouse.drawCursor" }, BoolObservable{ [gs] {return gs()->nav.mouse.drawCursor; },
-//                                                                          [gs](bool v) { gs()->nav.mouse.drawCursor = v; } });
-//    nav.checkbox(Caption{ "theme.textAreaBlinkCursor" }, BoolObservable{ [gs] {return gs()->textAreaBlinkCursor; },
-//                                                                         [gs](bool v) { gs()->textAreaBlinkCursor = v; } });
-//    nav.checkbox(Caption{ "theme.windowMoveFromTitlebarOnly" }, BoolObservable{ [gs] {return gs()->windowMoveFromTitlebarOnly; },
-//                                                                                [gs](bool v) { gs()->windowMoveFromTitlebarOnly = v; } });
-//    nav.checkbox(Caption{ "theme.windowEesizeFromEdge" }, BoolObservable{ [gs] {return gs()->windowResizeFromEdge; },
-//                                                                          [gs](bool v) { gs()->windowResizeFromEdge = v; } });
-//    nav.checkbox(Caption{ "theme.windowMoveInParent" }, BoolObservable{ [gs] {return gs()->windowMoveInParent; },
-//                                                                        [gs](bool v) { gs()->windowMoveInParent = v; } });
-//    nav.checkbox(Caption{ "theme.windowDrawBorder" }, BoolObservable{ gs()->windowDrawBorder });
-//    nav.checkbox(Caption{ "theme.frameDrawBorder" }, BoolObservable{ [gs] {return gs()->frameDrawBorder; },
-//                                                                     [gs](bool v) { gs()->frameDrawBorder = v; } });
-//    nav.checkbox(Caption{ "theme.debugHighlightMouseover" }, BoolObservable{ [gs] {return gs()->debugHighlightMouseover; },
-//                                                                             [gs](bool v) { gs()->debugHighlightMouseover = v; } });
-//    nav.checkbox(Caption{ "theme.keyboardNavigation" }, BoolObservable{ [gs] {return gs()->keyboardNavigation; },
-//                                                                        [gs](bool v) { gs()->keyboardNavigation = v; } });
-//
-//    /*auto& bfcfg = */iocfg.panel(Caption{ "Backend flags" }, WindowCollapsed{ true }, PanelHighlightHeader{ false });
-//    auto& stcfg = iocfg.hgrid2(0.3f, Caption{ "Style" }, WindowCollapsed{ true }, PanelHighlightHeader{ false });
-//    stcfg.label("Theme");
-//    stcfg.wdg<DropdownBox>(DropdownBoxItems{ "Default", "White" },
-//        DropdownBoxStrCallback{ [screen](std::string item) {
-//          if (item == "Default") screen->setTheme<DefaultTheme>();
-//          else if (item == "White") screen->setTheme<WhiteTheme>();
-//        } });
-//    auto screenPerform = SliderCallback{ [screen](float) { screen->needPerformLayout(screen); } };
-//    stcfg.add(elm::Label{ "Window border size" }, Element<Slider>{ SliderObservable{ gs()->windowPaddingLeft }, SliderRange{ 0.f, 20.f }, screenPerform});
-//    stcfg.add(elm::Label{ "Window border size" }, Element<Slider>{ SliderObservable{ gs()->windowBorderSize }, SliderRange{ 0.f, 5.f }, screenPerform });
-//    stcfg.add(elm::Label{ "Window padding top" }, Element<Slider>{ SliderObservable{ gs()->windowPaddingTop }, SliderRange{ 0.f, 20.f }, screenPerform });
-//    stcfg.add(elm::Label{ "Frame padding left" }, Element<Slider>{ SliderObservable{ gs()->framePaddingLeft }, SliderRange{ 0.f, 20.f }, screenPerform });
-//    stcfg.add(elm::Label{ "Frame padding top" }, Element<Slider>{ SliderObservable{ gs()->framePaddingTop }, SliderRange{ 0.f, 20.f }, screenPerform });
-//    stcfg.add(elm::Label{ "Inner spacing left" }, Element<Slider>{ SliderObservable{ gs()->innerSpacingCommon }, SliderRange{ 0.f, 20.f }, screenPerform});
-//    stcfg.add(elm::Label{ "Tool button side" },
-//        Element<Slider>{
-//        SliderObservable{ [=] { return (float)gs()->toolButtonSide; }, [=](float v) { gs()->toolButtonSide = (int)v; } },
-//            SliderRange{ 15.f, 50.f }, screenPerform
-//    });
-//
-//    auto& wopt = iocfg.hgrid2(0.5f, Caption{ "Window options" }, WindowCollapsed{ true });
-//    auto dwf = [screen, w = &dw](int f, int v = -1) {
-//        if (v < 0) return w->haveDrawFlag(f);
-//        w->setDrawFlag(f, v > 0);
-//        screen->needPerformLayout(screen);
-//        return false;
-//    };
-//    wopt.checkbox(Caption{ "No header" }, BoolObservable{ [=] {return !dwf(Window::DrawHeader); },
-//                                                          [=](bool v) { dwf(Window::DrawHeader, !v); } });
-//    wopt.checkbox(Caption{ "No title" }, BoolObservable{ [=] {return !dwf(Window::DrawTitle); },
-//                                                          [=](bool v) { dwf(Window::DrawTitle, !v); } });
-//    wopt.checkbox(Caption{ "No collapse icon" }, BoolObservable{ [=] {return !dwf(Window::DrawCollapseIcon); },
-//                                                                 [=](bool v) { dwf(Window::DrawCollapseIcon, !v); } });
-//    wopt.checkbox(Caption{ "No move" }, BoolObservable{ [w = &dw] { return !w->isDraggable(); }, [w = &dw](bool v) { w->setDraggable((Theme::WindowDraggable)!v); } });
-//    wopt.checkbox(Caption{ "No resize" }, BoolObservable{ [w = &dw] { return !w->canResize(); }, [w = &dw](bool v) { w->setCanResize(!v); } });
-//    wopt.checkbox(Caption{ "No background" }, BoolObservable{ [=] {return !dwf(Window::DrawBody); }, [=](bool v) { dwf(Window::DrawBody, !v); } });
-//    wopt.checkbox(Caption{ "No bring to front" }, BoolObservable{ [w = &dw] {return !w->canBringToFront(); }, [w = &dw](bool v) {w->setBringToFront(!v); } });
-//
-//    auto& wwidgets = pw.panel(Caption{ "Widgets" }, WindowCollapsed{ true });
-//    auto& wbasic = wwidgets.panel(Caption{ "Basic" }, WindowCollapsed{ true }, PanelHighlightHeader{ false });
-//    wbasic.hstack(5, 2,
-//        elm::Button{
-//              Caption{"Button"}, FixedHeight{17},
-//              ButtonCallback{ [w = &dw] { if (auto l = Label::find("#btn_action", w)) l->setCaption("Thanks for cliking me!!!"); }}
-//        },
-//        elm::Label{ WidgetId{ "#btn_action" } });
-//    wbasic.checkbox(Caption{ "checkbox" });
-//    auto radio_action = ButtonChangeCallback{ [w = &dw](Button* b) {
-//      if (b && !b->pushed())
-//        return;
-//      if (auto l = Label::find("#radio_action", w))
-//        l->setCaption("Clicked " + b->caption());
-//    } };
-//    auto makerbtn = [=](std::string text) { return elm::RadioBtn{ Caption{text}, radio_action, FixedHeight{17} }; };
-//    wbasic.hstack(5, 2,
-//        makerbtn("radio a"), makerbtn("radio b"), makerbtn("radio c"),
-//        elm::Label{ WidgetId{ "#radio_action" } });
-//
-//    auto makecbtn = [=](Color c) { return elm::Button{ Caption{ "Click" }, FixedHeight{ 17 }, BackgroundColor{c} }; };
-//    wbasic.hstack(5, 2, makecbtn(Color::red), makecbtn(Color::yellow), makecbtn(Color::green),
-//        makecbtn(Color::blue), makecbtn(Color::purple), makecbtn(Color::pink));
-//
-//    wbasic.hstack(5, 2,
-//        elm::Label{ "Hold to repeat:" },
-//        elm::UpDownButton{ UpDownCallback{ [w = &dw](bool v) {
-//            static int value = 0;
-//            value += (v ? 1 : -1);
-//            if (auto l = Label::find("#updown_action", w))
-//              l->setCaption(std::to_string(value));
-//          }
-//        } },
-//        elm::Label{ WidgetId{ "#updown_action"} });
-//
-//    wbasic.hstack(5, 2,
-//        elm::Label{ Caption{"Hover over me"}, TooltipText{"I am tooltip"} },
-//        elm::Label{ " - " },
-//        elm::Label{ Caption{"or me"},
-//                   TooltipWidget<Window>{
-//                      IsVisible{ false },
-//                      WidgetStretchLayout{ Orientation::Vertical },
-//                      Caption{ "And I am tooltip too" },
-//                      FixedSize{ 100, 60 },
-//                      makecbtn(Color::red), makecbtn(Color::yellow), makecbtn(Color::green)
-//                   }
-//        });
-//    wbasic.widget(FixedHeight{ 2 }, elm::SplitLine{});
-//    wbasic.frame(WidgetGridLayout{ GridLayoutSplit{ 0.7f, 0.3f }, GridLayoutColAlignment{ Alignment::Fill } },
-//        elm::Label{ "Value" },
-//        elm::Label{ "Caption" },
-//        elm::DropdownBox{
-//          DropdownBoxFill{ [](string& r) { static char i = 'a'; r = std::string(5, i); return i++ < 'z';  }},
-//          ItemHeight{ 20 }
-//        },
-//        elm::Label{ Caption{"combo (?)"}, TooltipText{ "Combo section fill function example" } },
-//        elm::Textbox{
-//          TextValue{"Input text here!"}, IsEditable{true}, FixedHeight{20},
-//          TextBoxEditCallback{ [](const std::string& s, bool) { if (auto l = Label::find("#inp_txt_smp")) l->setCaption(s); }}
-//        },
-//        elm::Label{ Caption{"Input text"}, WidgetId{"#inp_txt_smp"} },
-//        elm::Textbox{ TextPlaceholder{"input text here"}, IsEditable{ true }, FixedHeight{ 20 } },
-//        elm::Label{ Caption{ "Input text (w/ hint)" } }
-//
-//    );
-//}
 
 ExampleApplication::ExampleApplication() : nanogui::Screen(nanogui::Vector2i(1400, 700), "Sora PathTracer", true) {
     using namespace nanogui;
@@ -602,17 +448,129 @@ ExampleApplication::ExampleApplication() : nanogui::Screen(nanogui::Vector2i(140
     vTranslationZ->setSpinnable(true);
     vTranslationZ->setValueIncrement(1.f);
 
-    auto& properties =this->wdg<PropertiesEditor>(Caption{ "Properties" },
-        WidgetId{ "#prop_editor" },
-        Position{ this->width() - 370, 30 },
-        FixedSize{ 300, this->height() - 400 },
-        WindowMovable{ Theme::dgFixed });
-    auto* propertyLayout = new GridLayout(Orientation::Horizontal, 2, Alignment::Middle, 2, 5);
-    propertyLayout->setColAlignment({ Alignment::Maximum, Alignment::Fill });
-    properties.setLayout(propertyLayout);
-    properties.label("test");
-    properties.intbox<int>(IsEditable{true});
+    //auto& properties =this->wdg<PropertiesEditor>(Caption{ "Properties" },
+    //    WidgetId{ "#prop_editor" },
+    //    Position{ this->width() - 370, 30 },
+    //    FixedSize{ 300, this->height() - 400 },
+    //    WindowMovable{ Theme::dgFixed });
+    //auto* propertyLayout = new GridLayout(Orientation::Horizontal, 2, Alignment::Middle, 2, 5);
+    //propertyLayout->setColAlignment({ Alignment::Maximum, Alignment::Fill });
+    //properties.setLayout(propertyLayout);
 
+    auto& modelList = this->window(Caption{ "Model Settings" },
+        WidgetStretchLayout{ Orientation::Horizontal },
+        Position{ 180, 180 },
+        MinimumSize{ 400, 400 },
+        WidgetId{ "#model_layout_wnd" });
+
+    modelList.listbox(RelativeSize{ 0.33, 0 },
+        ListboxCallback{ [this](ListboxItem* i) {
+          if (Label* lb = this->findWidget<Label>("#model_layout_lb"))
+            lb->setCaption("Model: " + i->caption());
+        } },
+        WidgetId{"#model_list"}
+        );
+    auto& modelDesc = modelList.widget(WidgetStretchLayout{ Orientation::Vertical });
+    modelDesc.label(Caption{ "Model: id" },
+        CaptionHAlign{ TextHAlign::hLeft },
+        FixedHeight{ 40 },
+        WidgetId{ "#model_layout_lb" });
+    modelDesc.tabs(TabNames{ "Location", "Material" });
+
+    auto& lightList = this->window(Caption{ "Light Settings" },
+        WidgetStretchLayout{ Orientation::Horizontal },
+        Position{ 480, 180 },
+        MinimumSize{ 400, 400 },
+        WidgetId{ "#light_layout_wnd" });
+    //static_cast<FloatBox<float>*>(this->findWidget("#light_position.x"))    
+    selectedLight = nullptr;
+
+    auto& lightDesc = lightList.widget(WidgetStretchLayout{ Orientation::Vertical });
+    lightDesc.label(Caption{ "Light: id" },
+        CaptionHAlign{ TextHAlign::hLeft },
+        FixedHeight{ 40 },
+        WidgetId{ "#light_layout_lb" });
+    //lightDesc.tabs(TabNames{ "Information", "Material" });
+    auto& tabWidget = lightDesc.tabs();
+
+    auto& lightInformation = *tabWidget.createTab("Information");
+    auto& vscroll = lightInformation.vscrollpanel();
+    auto& wrapper = vscroll.widget();
+    wrapper.setLayout(new GroupLayout(5, 5, 5, 10));
+    vscroll.setFixedSize({ 200, 900 });
+    wrapper.label(Caption{ "Position" }, CaptionFont{ "sans-bold" });
+    auto& positionX = wrapper.widget();
+    positionX.flexlayout(Orientation::Horizontal);
+    positionX.label(Caption{ "X" },
+        CaptionFont{ "sans" },
+        RelativeSize{ 0.5, 0 });
+    auto& positionXValue = positionX.wdg<FloatBox<float>>();
+    positionXValue.setValue(0);
+    positionXValue.setSpinnable(true);
+    positionXValue.setEditable(true);
+    positionXValue.setId("#light_position_x");
+    positionXValue.setCallback([this](float x) {
+        if (selectedLight == nullptr)
+            return;
+        selectedLight->position.x = x;
+        });
+
+    auto& positionY = wrapper.widget();
+    positionY.flexlayout(Orientation::Horizontal);
+    positionY.label(Caption{ "Y" },
+        CaptionFont{ "sans" },
+        RelativeSize{ 0.5, 0 });
+    auto& positionYValue = positionY.wdg<FloatBox<float>>(1.f);
+    positionYValue.setSpinnable(true);
+    positionYValue.setEditable(true);
+    positionYValue.setId("#light_position_y");
+    positionYValue.setCallback([this](float y) {
+        if (selectedLight == nullptr)
+            return;
+        selectedLight->position.y = y;
+        });
+
+    auto& positionZ = wrapper.widget();
+    positionZ.flexlayout(Orientation::Horizontal);
+    positionZ.label(Caption{ "Z" },
+        CaptionFont{ "sans" },
+        RelativeSize{ 0.5, 0 });
+    auto& positionZValue = positionZ.wdg<FloatBox<float>>(1.f);
+    positionZValue.setSpinnable(true);
+    positionZValue.setEditable(true);
+    positionZValue.setId("#lgiht_position_z");
+    positionZValue.setCallback([this](float z) {
+        if (selectedLight == nullptr)
+            return;
+        selectedLight->position.z = z;
+        });
+
+    wrapper.label(Caption{ "Color" }, CaptionFont{ "sans-bold" });
+    auto& lightR = wrapper.widget();
+    lightR.flexlayout(Orientation::Horizontal);
+    lightR.label(Caption{ "R" },
+        CaptionFont{ "sans" },
+        RelativeSize{ 0.5, 0 });
+    auto& lightRValue = lightR.wdg<IntBox<int>>(1);
+    lightRValue.setSpinnable(true);
+    lightRValue.setEditable(true);
+
+
+    auto& lightMaterial = *tabWidget.createTab("Material");
+    tabWidget.setActiveTab(0);
+
+    lightList.listbox(RelativeSize{ 0.33, 0 },
+        ListboxCallback{ [&](ListboxItem* i) {
+            selectedLight = this->mCanvas->findLight(i->caption());
+            positionXValue.setValue(selectedLight->position.x);
+            positionYValue.setValue(selectedLight->position.y);
+            positionZValue.setValue(selectedLight->position.z);
+          if (Label* lb = this->findWidget<Label>("#light_layout_lb"))
+            lb->setCaption("Light: " + i->caption());
+        } },
+        WidgetId{ "#light_list" }
+        );
+    
     // 旋转
     //auto vRotateX = form->addVariable("Rotate.X", true);
     //auto vRotateY = form->addVariable("Rotate.Y", true);

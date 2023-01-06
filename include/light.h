@@ -6,6 +6,7 @@
 class Light {
 public:
 	Light() {
+		std::cout << "yong" << std::endl;
 		name = "";
 		position = vec3(-2.f);
 		color = vec3(1.0f);

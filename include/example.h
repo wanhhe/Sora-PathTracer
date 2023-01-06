@@ -68,4 +68,6 @@ private:
     //nanogui::TabHeader* tabHeader;
     Config* config;
     Camera* camera;
+    Light* selectedLight;
+    Model* selectedModel;
 };
