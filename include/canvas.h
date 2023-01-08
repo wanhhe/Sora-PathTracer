@@ -92,7 +92,7 @@ public:
     MyGLCanvas(Widget* parent, Camera* _camera);
 
     ~MyGLCanvas() {
-        mShader.free();
+        //mShader.free();
     }
 
     virtual void drawGL();
@@ -122,12 +122,16 @@ public:
 
     Light* findLight(const string& id);
 
+    Model* findModel(const string& id);
+
     Light* firstLight();
+
+    Model* firstModel();
 
 private:
     vector<nanogui::GLShader> shaderList;
     vector<nanogui::GLShader> lightShaderList;
-    nanogui::GLShader mShader;
+    //nanogui::GLShader mShader;
     nanogui::GLShader lightShader;
     mat4 model;
     mat4 view;

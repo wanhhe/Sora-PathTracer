@@ -6,37 +6,45 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1) {
     using namespace nanogui;
 
-    //mShader.init(
-    //    /* An identifying name */
-    //    "a_simple_shader",
+    //modelList.emplace_back(new Model("..\\models\\sara\\sara.obj", "Model 1"));
 
-    //    /* Vertex shader */
-    //    "#version 330 core\n"
-    //    "layout(location = 0) in vec3 aPos;\n"
-    //    "layout(location = 1) in vec3 aNormal;\n"
-    //    "layout(location = 2) in vec2 aTexCoords;\n"
+    GLShader diffuseShder;
+    diffuseShder.init(
+        /* An identifying name */
+        "diffuse_shader",
 
-    //    "out vec2 TexCoords;\n"
-    //    "uniform mat4 modelViewProj;\n"
+        /* Vertex shader */
+        "#version 330 core\n"
+        "layout(location = 0) in vec3 aPos;\n"
+        "layout(location = 1) in vec3 aNormal;\n"
+        "layout(location = 2) in vec2 aTexCoords;\n"
 
-    //    "void main(){\n"
-    //        "TexCoords = aTexCoords;\n"
-    //        "gl_Position = modelViewProj * vec4(aPos, 1.0);\n"
-    //    "}\n",
+        "out vec2 TexCoords;\n"
+        "uniform mat4 model;\n"
+        "uniform mat4 view;\n"
+        "uniform mat4 projection;\n"
 
-    //    /* Fragment shader */
-    //    "#version 330 core\n"
-    //    "out vec4 FragColor;\n"
+        "void main(){\n"
+            "TexCoords = aTexCoords;\n"
+            "gl_Position =  projection * view * model * vec4(aPos, 1.0);\n"
+        "}\n",
 
-    //    "in vec2 TexCoords;\n"
+        /* Fragment shader */
+        "#version 330 core\n"
+        "out vec4 FragColor;\n"
 
-    //    "uniform sampler2D texture_diffuse1;\n"
+        "in vec2 TexCoords;\n"
 
-    //    "void main(){\n"
-    //        "FragColor = texture(texture_diffuse1, TexCoords);\n"
-    //    "}\n"   
-    //);
+        "uniform sampler2D texture_diffuse1;\n"
 
+        "void main(){\n"
+            "FragColor = texture(texture_diffuse1, TexCoords);\n"
+        "}\n"   
+    );
+    diffuseShder.bind();
+    shaderList.emplace_back(diffuseShder);
+
+    GLShader mShader;
     mShader.init(
         /* An identifying name */
         "a_simple_shader",
@@ -154,7 +162,6 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     //camera->scaleSpeed = 0.15;
     //camera->sensitivity = 0.2;
 
-    modelList.emplace_back(new Model("..\\models\\sara\\sara.obj", "Model 1"));
     //modelList.emplace_back(new Model("../models/sara/sara.obj"));
     mShader.bind();
     mShader.setUniform("viewPos", camera->position);
@@ -164,8 +171,8 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
 
     //translate = vec3(0.f);
     //scale = vec3(1.f);
-    model = mat4(1.0f);
-    model = glm::translate(model, vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
+    //model = mat4(1.0f);
+    //model = glm::translate(model, vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
     //mShader.bind();
  /*   mShader.uploadIndices(indices);
     mShader.uploadAttrib("position", positions);
@@ -179,9 +186,10 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
 void MyGLCanvas::drawGL() {
     using namespace nanogui;
 
-    mShader.bind();
+    //mShader.bind();
+    //shaderList[0].bind();
 
-    mat4 mvp;
+    if (modelList.size() == 0) return;
     updateCamera();
     //std::cout << camera->position.x << " " << camera->position.y << " " << camera->position.z << std::endl;
     //std::cout << camera->target.x << " " << camera->target.y << " " << camera->target.z << std::endl;
@@ -192,29 +200,13 @@ void MyGLCanvas::drawGL() {
     //projection = glm::perspective(radians(camera->fov), 1.0f, 0.1f, 100.0f);
     //projection = glm::perspective(radians(45.f), 1.0f, 0.1f, 100.0f);
 
-    model[0][0] = 1.0f;
-    model[0][1] = 0.0f;
-    model[0][2] = 0.0f;
-    model[0][3] = 0.0f;
-    model[1][0] = 0.0f;
-    model[1][1] = 1.0f;
-    model[1][2] = 0.0f;
-    model[1][3] = 0.0f;
-    model[2][0] = 0.0f;
-    model[2][1] = 0.0f;
-    model[2][2] = 1.0f;
-    model[2][3] = 0.0f;
-    model[3][0] = 0.0f;
-    model[3][1] = 0.0f;
-    model[3][2] = 0.0f;
-    model[3][3] = 1.0f;
-    model = glm::translate(model, translate);
-    model = glm::scale(model, scale);
-    mvp = projection * view * model;
+    //model = glm::translate(model, translate);
+    //model = glm::scale(model, scale);
+    //mvp = projection * view * model;
 
-    mShader.setUniform("model", model);
-    mShader.setUniform("view", view);
-    mShader.setUniform("projection", projection);
+    //mShader.setUniform("model", model);
+    //mShader.setUniform("view", view);
+    //mShader.setUniform("projection", projection);
     for (int i = 0; i < modelList.size(); i++) {
         model[0][0] = 1.0f;
         model[0][1] = 0.0f;
@@ -234,11 +226,13 @@ void MyGLCanvas::drawGL() {
         model[3][3] = 1.0f;
         model = glm::translate(model, modelList[i]->translate);
         model = glm::scale(model, modelList[i]->scale);
+        shaderList[modelList[i]->shaderIndex].bind();
         shaderList[modelList[i]->shaderIndex].setUniform("model", model);
         shaderList[modelList[i]->shaderIndex].setUniform("view", view);
         shaderList[modelList[i]->shaderIndex].setUniform("projection", projection);
         glEnable(GL_DEPTH_TEST);
-        modelList[i]->draw(mShader);
+        //modelList[i]->draw(mShader);
+        modelList[i]->draw(shaderList[modelList[i]->shaderIndex]);
         glDisable(GL_DEPTH_TEST);
     }
     //lightShader.bind();
@@ -312,8 +306,19 @@ Light* MyGLCanvas::findLight(const string& id) {
     return nullptr;
 }
 
+Model* MyGLCanvas::findModel(const string& id) {
+    for (int i = 0; i < modelList.size(); i++) {
+        if (modelList[i]->name == id) return modelList[i];
+    }
+    return nullptr;
+}
+
 Light* MyGLCanvas::firstLight() {
     return lightList[0];
+}
+
+Model* MyGLCanvas::firstModel() {
+    return modelList[0];
 }
 
 bool MyGLCanvas::scrollEvent(const nanogui::Vector2i& p, const nanogui::Vector2f& rel) {

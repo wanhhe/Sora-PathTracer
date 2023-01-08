@@ -295,6 +295,13 @@ void toggleTreeView(nanogui::Screen* screen, bool show)
     }
 }
 
+void radio(const nanogui::Widget& parent, int index) {
+    for (int i = 0; i < parent.childCount(); i++) {
+        if (i == index) parent.findIndex<nanogui::CheckBox>(index)->setChecked(true);
+        else parent.findIndex<nanogui::CheckBox>(i)->setChecked(false);
+    }
+}
+
 ExampleApplication::ExampleApplication() : nanogui::Screen(nanogui::Vector2i(1400, 700), "Sora PathTracer", true) {
     using namespace nanogui;
 
@@ -406,76 +413,272 @@ ExampleApplication::ExampleApplication() : nanogui::Screen(nanogui::Vector2i(140
     mCanvas->setBackgroundColor({ 100, 100, 100, 255 });
     mCanvas->setSize({ SCREEN_WIDTH, SCREEN_HEIGHT });
 
-    FormHelper* form1 = new FormHelper(this);
-    ref<Window> setting1 = form1->addWindow(Vector2i(FORM_WIDTH + 5 * MARGIN + SCREEN_WIDTH, 3 * MARGIN), "Settings1");
-    setting->setFixedWidth(FORM_WIDTH);
-    setting->setFixedHeight(FORM_HEIGHT);
-
-    // 模型设置
-    form1->addGroup("Model Settings");
-    // 缩放
-    auto vScaleX = form1->addVariable("Scale.X", mCanvas->scale.x, true);
-    vScaleX->setFixedWidth(VALUE_WIDTH);
-    vScaleX->setSpinnable(true);
-    vScaleX->setMinValue(0.1f);
-    vScaleX->setValueIncrement(0.1f);
-
-    auto vScaleY = form1->addVariable("Scale.Y", mCanvas->scale.y, true);
-    vScaleY->setFixedWidth(VALUE_WIDTH);
-    vScaleY->setSpinnable(true);
-    vScaleY->setMinValue(0.1f);
-    vScaleY->setValueIncrement(0.1f);
-
-    auto vScaleZ = form1->addVariable("Scale.Z", mCanvas->scale.z, true);
-    vScaleZ->setFixedWidth(VALUE_WIDTH);
-    vScaleZ->setSpinnable(true);
-    vScaleZ->setMinValue(0.1f);
-    vScaleZ->setValueIncrement(0.1f);
-
-    // 平移
-    auto vTranslationX = form1->addVariable("Translation.X", mCanvas->translate.x, true);
-    vTranslationX->setFixedWidth(VALUE_WIDTH);
-    vTranslationX->setSpinnable(true);
-    vTranslationX->setValueIncrement(1.f);
-
-    auto vTranslationY = form1->addVariable("Translation.Y", mCanvas->translate.y, true);
-    vTranslationY->setFixedWidth(VALUE_WIDTH);
-    vTranslationY->setSpinnable(true);
-    vTranslationY->setValueIncrement(1.f);
-
-    auto vTranslationZ = form1->addVariable("Translation.Z", mCanvas->translate.z, true);
-    vTranslationZ->setFixedWidth(VALUE_WIDTH);
-    vTranslationZ->setSpinnable(true);
-    vTranslationZ->setValueIncrement(1.f);
-
-    //auto& properties =this->wdg<PropertiesEditor>(Caption{ "Properties" },
-    //    WidgetId{ "#prop_editor" },
-    //    Position{ this->width() - 370, 30 },
-    //    FixedSize{ 300, this->height() - 400 },
-    //    WindowMovable{ Theme::dgFixed });
-    //auto* propertyLayout = new GridLayout(Orientation::Horizontal, 2, Alignment::Middle, 2, 5);
-    //propertyLayout->setColAlignment({ Alignment::Maximum, Alignment::Fill });
-    //properties.setLayout(propertyLayout);
-
     auto& modelList = this->window(Caption{ "Model Settings" },
         WidgetStretchLayout{ Orientation::Horizontal },
         Position{ 180, 180 },
         MinimumSize{ 400, 400 },
         WidgetId{ "#model_layout_wnd" });
+    selectedModel = nullptr;
 
-    modelList.listbox(RelativeSize{ 0.33, 0 },
-        ListboxCallback{ [this](ListboxItem* i) {
-          if (Label* lb = this->findWidget<Label>("#model_layout_lb"))
-            lb->setCaption("Model: " + i->caption());
-        } },
-        WidgetId{"#model_list"}
-        );
     auto& modelDesc = modelList.widget(WidgetStretchLayout{ Orientation::Vertical });
     modelDesc.label(Caption{ "Model: id" },
         CaptionHAlign{ TextHAlign::hLeft },
         FixedHeight{ 40 },
         WidgetId{ "#model_layout_lb" });
-    modelDesc.tabs(TabNames{ "Location", "Material" });
+    /*modelDesc.tabs(TabNames{ "Location", "Material" });*/
+    auto& modelTabWidget = modelDesc.tabs();
+    auto& modelLocation = *modelTabWidget.createTab("Location");
+    auto& modelLocationVscroll = modelLocation.vscrollpanel();
+    auto& modelLocationWrapper = modelLocationVscroll.widget();
+    modelLocationWrapper.setLayout(new GroupLayout(5, 5, 5, 10));
+    modelLocationVscroll.setFixedSize({ 200, 900 });
+    modelLocationWrapper.label(Caption{ "Translation" }, CaptionFont{ "sans-bold" });
+    auto& translateX = modelLocationWrapper.widget();
+    translateX.flexlayout(Orientation::Horizontal);
+    translateX.label(Caption{ "X" },
+        CaptionFont{ "sans" },
+        RelativeSize{ 0.5, 0 });
+    auto& translateXValue = translateX.wdg<FloatBox<float>>();
+    translateXValue.setValue(0);
+    translateXValue.setSpinnable(true);
+    translateXValue.setEditable(true);
+    translateXValue.setId("#model_translate_x");
+    translateXValue.setValueIncrement(1.f);
+    translateXValue.setCallback([this](float x) {
+        if (selectedModel == nullptr)
+            return;
+        selectedModel->translate.x = x;
+        });
+
+    auto& translateY = modelLocationWrapper.widget();
+    translateY.flexlayout(Orientation::Horizontal);
+    translateY.label(Caption{ "Y" },
+        CaptionFont{ "sans" },
+        RelativeSize{ 0.5, 0 });
+    auto& translateYValue = translateY.wdg<FloatBox<float>>(1.f);
+    translateYValue.setSpinnable(true);
+    translateYValue.setEditable(true);
+    translateYValue.setId("#model_translate_y");
+    translateYValue.setValueIncrement(1.f);
+    translateYValue.setCallback([this](float y) {
+        if (selectedModel == nullptr)
+            return;
+        selectedModel->translate.y = y;
+        });
+
+    auto& translateZ = modelLocationWrapper.widget();
+    translateZ.flexlayout(Orientation::Horizontal);
+    translateZ.label(Caption{ "Z" },
+        CaptionFont{ "sans" },
+        RelativeSize{ 0.5, 0 });
+    auto& translateZValue = translateZ.wdg<FloatBox<float>>(1.f);
+    translateZValue.setSpinnable(true);
+    translateZValue.setEditable(true);
+    translateZValue.setId("#model_translate_z");
+    translateYValue.setValueIncrement(1.f);
+    translateZValue.setCallback([this](float z) {
+        if (selectedModel == nullptr)
+            return;
+        selectedModel->translate.z = z;
+        });
+
+    modelLocationWrapper.label(Caption{ "Scale" }, CaptionFont{ "sans-bold" });
+    auto& modelScaleX = modelLocationWrapper.widget();
+    modelScaleX.flexlayout(Orientation::Horizontal);
+    modelScaleX.label(Caption{ "X" },
+        CaptionFont{ "sans" },
+        RelativeSize{ 0.5, 0 });
+    auto& modelScaleXValue = modelScaleX.wdg<FloatBox<float>>(1.f);
+    modelScaleXValue.setSpinnable(true);
+    modelScaleXValue.setEditable(true);
+    modelScaleXValue.setMinValue(0.f);
+    modelScaleXValue.setCallback([this](float x) {
+        if (selectedModel == nullptr)
+            return;
+        selectedModel->scale.x = x;
+        });
+
+    auto& modelScaleY = modelLocationWrapper.widget();
+    modelScaleY.flexlayout(Orientation::Horizontal);
+    modelScaleY.label(Caption{ "Y" },
+        CaptionFont{ "sans" },
+        RelativeSize{ 0.5, 0 });
+    auto& modelScaleYValue = modelScaleY.wdg<FloatBox<float>>(1.f);
+    modelScaleYValue.setSpinnable(true);
+    modelScaleYValue.setEditable(true);
+    modelScaleYValue.setMinValue(0.f);
+    modelScaleYValue.setCallback([this](float y) {
+        if (selectedModel == nullptr)
+            return;
+        selectedModel->scale.y = y;
+        });
+
+    auto& modelScaleZ = modelLocationWrapper.widget();
+    modelScaleZ.flexlayout(Orientation::Horizontal);
+    modelScaleZ.label(Caption{ "Z" },
+        CaptionFont{ "sans" },
+        RelativeSize{ 0.5, 0 });
+    auto& modelScaleZValue = modelScaleZ.wdg<FloatBox<float>>(1.f);
+    modelScaleZValue.setSpinnable(true);
+    modelScaleZValue.setEditable(true);
+    modelScaleZValue.setMinValue(0.f);
+    modelScaleZValue.setCallback([this](float z) {
+        if (selectedModel == nullptr)
+            return;
+        selectedModel->scale.z = z;
+        });
+
+    // TODO 还需要完成完成点中模型项材质参数也会改变
+    auto& modelMaterial = *modelTabWidget.createTab("Material");
+    auto& modelMaterialVscroll = modelMaterial.vscrollpanel();
+    auto& modelMaterialWrapper = modelMaterialVscroll.widget();
+    modelMaterialVscroll.setFixedSize({ 200, 900 });
+    modelMaterialWrapper.setLayout(new GroupLayout(5, 5, 5, 10));
+
+    modelMaterialWrapper.label(Caption{ "Shader" }, CaptionFont{ "sans-bold" });
+    auto& shaderChoice = modelMaterialWrapper.widget();
+    shaderChoice.flexlayout(Orientation::Vertical);
+    auto& diffuseShader = shaderChoice.checkbox(Caption{ "Diffuse" });
+    diffuseShader.setId("#diffuse_shader_box");
+    diffuseShader.setCallback([&](bool s) {
+        if (s) { // 如果选中取消其它checkbox的选中状态
+            //auto specular = shaderChoice.findWidget<CheckBox>("#specular_shader_box");
+            //if (specular->checked()) specular->setChecked(false);
+            //auto phong = shaderChoice.findWidget<CheckBox>("#phong_shader_box");
+            //if (phong->checked()) phong->setChecked(false);
+            //auto blinnphong = shaderChoice.findWidget<CheckBox>("#blinnphong_shader_box");
+            //if (blinnphong->checked()) blinnphong->setChecked(false);
+            //auto microfacet = shaderChoice.findWidget<CheckBox>("#microfacet_shader_box");
+            //if (microfacet->checked()) microfacet->setChecked(false);
+            radio(shaderChoice, 0);
+            if (selectedModel == nullptr) return;
+            selectedModel->shaderIndex = 0;
+        }
+        else { // 如果取消选中
+            // 默认使用diffuseShader
+            diffuseShader.setChecked(true);
+        }
+        });
+    auto& specularShader = shaderChoice.checkbox(Caption{ "Specular" });
+    specularShader.setId("#specular_shader_box");
+    specularShader.setCallback([&](bool s) {
+        if (s) { // 如果选中取消其它checkbox的选中状态
+            //auto diffuse = shaderChoice.findWidget<CheckBox>("#diffuse_shader_box");
+            //if (diffuse->checked()) diffuse->setChecked(false);
+            //auto phong = shaderChoice.findWidget<CheckBox>("#phong_shader_box");
+            //if (phong->checked()) phong->setChecked(false);
+            //auto blinnphong = shaderChoice.findWidget<CheckBox>("#blinnphong_shader_box");
+            //if (blinnphong->checked()) blinnphong->setChecked(false);
+            //auto microfacet = shaderChoice.findWidget<CheckBox>("#microfacet_shader_box");
+            //if (microfacet->checked()) microfacet->setChecked(false);
+            radio(shaderChoice, 1);
+            if (selectedModel == nullptr) return;
+            selectedModel->shaderIndex = 1;
+        }
+        else { // 如果取消选中
+            // 默认使用diffuseShader
+            diffuseShader.setChecked(true);
+            if (selectedModel == nullptr) return;
+            selectedModel->shaderIndex = 0;
+        }
+        });
+    auto& phongShader = shaderChoice.checkbox(Caption{"Phong"});
+    phongShader.setId("#phong_shader_box");
+    phongShader.setCallback([&](bool s) {
+        if (s) { // 如果选中取消其它checkbox的选中状态
+            //auto diffuse = shaderChoice.findWidget<CheckBox>("#diffuse_shader_box");
+            //if (diffuse->checked()) diffuse->setChecked(false);
+            //auto specular = shaderChoice.findWidget<CheckBox>("#specular_shader_box");
+            //if (specular->checked()) specular->setChecked(false);
+            //auto blinnphong = shaderChoice.findWidget<CheckBox>("#blinnphong_shader_box");
+            //if (blinnphong->checked()) blinnphong->setChecked(false);
+            //auto microfacet = shaderChoice.findWidget<CheckBox>("#microfacet_shader_box");
+            //if (microfacet->checked()) microfacet->setChecked(false);
+            radio(shaderChoice, 2);
+            if (selectedModel == nullptr) return;
+            selectedModel->shaderIndex = 2;
+        }
+        else { // 如果取消选中
+            // 默认使用diffuseShader
+            diffuseShader.setChecked(true);
+            if (selectedModel == nullptr) return;
+            selectedModel->shaderIndex = 0;
+        }
+        });
+    auto& blinnphongShader = shaderChoice.checkbox(Caption{ "BlinnPhong" });
+    blinnphongShader.setId("#blinnphong_shader_box");
+    blinnphongShader.setCallback([&](bool s) {
+        if (s) { // 如果选中取消其它checkbox的选中状态
+            //auto diffuse = shaderChoice.findWidget<CheckBox>("#diffuse_shader_box");
+            //if (diffuse->checked()) diffuse->setChecked(false);
+            //auto specular = shaderChoice.findWidget<CheckBox>("#specular_shader_box");
+            //if (specular->checked()) specular->setChecked(false);
+            //auto phong = shaderChoice.findWidget<CheckBox>("#phong_shader_box");
+            //if (phong->checked()) phong->setChecked(false);
+            //auto microfacet = shaderChoice.findWidget<CheckBox>("#microfacet_shader_box");
+            //if (microfacet->checked()) microfacet->setChecked(false);
+            radio(shaderChoice, 3);
+            if (selectedModel == nullptr) return;
+            selectedModel->shaderIndex = 3;
+        }
+        else { // 如果取消选中
+            // 默认使用diffuseShader
+            diffuseShader.setChecked(true);
+            if (selectedModel == nullptr) return;
+            selectedModel->shaderIndex = 0;
+        }
+        });
+    auto& microfacetShader = shaderChoice.checkbox(Caption{ "Microfacet" });
+    microfacetShader.setId("#microfacet_shader_box");
+    microfacetShader.setCallback([&](bool s) {
+        if (s) { // 如果选中取消其它checkbox的选中状态
+            //auto diffuse = shaderChoice.findWidget<CheckBox>("#diffuse_shader_box");
+            //if (diffuse->checked()) diffuse->setChecked(false);
+            //auto specular = shaderChoice.findWidget<CheckBox>("#specular_shader_box");
+            //if (specular->checked()) specular->setChecked(false);
+            //auto phong = shaderChoice.findWidget<CheckBox>("#phong_shader_box");
+            //if (phong->checked()) phong->setChecked(false);
+            //auto blinnphong = shaderChoice.findWidget<CheckBox>("#blinnphong_shader_box");
+            //if (blinnphong->checked()) blinnphong->setChecked(false);
+            radio(shaderChoice, 4);
+            if (selectedModel == nullptr) return;
+            selectedModel->shaderIndex = 4;
+        }
+        else { // 如果取消选中
+            // 默认使用diffuseShader
+            diffuseShader.setChecked(true);
+            if (selectedModel == nullptr) return;
+            selectedModel->shaderIndex = 0;
+        }
+        });
+    diffuseShader.setChecked(true);
+
+    modelMaterialWrapper.label(Caption{ "Parameter" }, CaptionFont{ "sans-bold" });
+    auto& parameterChoice = modelMaterialWrapper.widget();
+    parameterChoice.flexlayout(Orientation::Horizontal);
+    parameterChoice.label(Caption{ "Ka" },
+        CaptionFont{ "sans" },
+        RelativeSize{ 0.5, 0 });
+    auto& Ka = parameterChoice.wdg<FloatBox<float>>();
+    
+
+    modelTabWidget.setActiveTab(0);
+    modelList.listbox(RelativeSize{ 0.33, 0 },
+        ListboxCallback{ [&](ListboxItem* i) {
+            selectedModel = this->mCanvas->findModel(i->caption());
+            translateXValue.setValue(selectedModel->translate.x);
+            translateYValue.setValue(selectedModel->translate.y);
+            translateZValue.setValue(selectedModel->translate.z);
+            modelScaleXValue.setValue(selectedModel->scale.x);
+            modelScaleYValue.setValue(selectedModel->scale.y);
+            modelScaleZValue.setValue(selectedModel->scale.z);
+            radio(shaderChoice, selectedModel->shaderIndex);
+          if (Label* lb = this->findWidget<Label>("#model_layout_lb"))
+            lb->setCaption("Model: " + i->caption());
+        } },
+        WidgetId{ "#model_list" }
+        );
+
 
     auto& lightList = this->window(Caption{ "Light Settings" },
         WidgetStretchLayout{ Orientation::Horizontal },
@@ -491,13 +694,13 @@ ExampleApplication::ExampleApplication() : nanogui::Screen(nanogui::Vector2i(140
         FixedHeight{ 40 },
         WidgetId{ "#light_layout_lb" });
     //lightDesc.tabs(TabNames{ "Information", "Material" });
-    auto& tabWidget = lightDesc.tabs();
+    auto& lightTabWidget = lightDesc.tabs();
 
-    auto& lightInformation = *tabWidget.createTab("Information");
-    auto& vscroll = lightInformation.vscrollpanel();
-    auto& wrapper = vscroll.widget();
+    auto& lightInformation = *lightTabWidget.createTab("Information");
+    auto& lightVscroll = lightInformation.vscrollpanel();
+    auto& wrapper = lightVscroll.widget();
     wrapper.setLayout(new GroupLayout(5, 5, 5, 10));
-    vscroll.setFixedSize({ 200, 900 });
+    lightVscroll.setFixedSize({ 200, 900 });
     wrapper.label(Caption{ "Position" }, CaptionFont{ "sans-bold" });
     auto& positionX = wrapper.widget();
     positionX.flexlayout(Orientation::Horizontal);
@@ -556,8 +759,8 @@ ExampleApplication::ExampleApplication() : nanogui::Screen(nanogui::Vector2i(140
     lightRValue.setEditable(true);
 
 
-    auto& lightMaterial = *tabWidget.createTab("Material");
-    tabWidget.setActiveTab(0);
+    auto& lightMaterial = *lightTabWidget.createTab("Material");
+    lightTabWidget.setActiveTab(0);
 
     lightList.listbox(RelativeSize{ 0.33, 0 },
         ListboxCallback{ [&](ListboxItem* i) {
