@@ -475,7 +475,7 @@ ExampleApplication::ExampleApplication() : nanogui::Screen(nanogui::Vector2i(140
     translateZValue.setSpinnable(true);
     translateZValue.setEditable(true);
     translateZValue.setId("#model_translate_z");
-    translateYValue.setValueIncrement(1.f);
+    translateZValue.setValueIncrement(1.f);
     translateZValue.setCallback([this](float z) {
         if (selectedModel == nullptr)
             return;

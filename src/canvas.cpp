@@ -1,6 +1,127 @@
 #include "canvas.h"
 
-int count1 = 1;
+const string diffuseVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"layout(location = 1) in vec3 aNormal;\n"
+"layout(location = 2) in vec2 aTexCoords;\n"
+"out vec2 TexCoords;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"void main(){\n"
+"   TexCoords = aTexCoords;\n"
+"   gl_Position =  projection * view * model * vec4(aPos, 1.0);\n"
+"}\n";
+
+const string diffuseFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec2 TexCoords;\n"
+"uniform sampler2D texture_diffuse1;\n"
+"void main(){\n"
+"   FragColor = texture(texture_diffuse1, TexCoords);\n"
+"}\n";
+
+const string specularVertexShader =
+"#version 330 core\n"
+"void main() {\n"
+"}\n";
+
+const string specularFragShader =
+"#version 330 core\n"
+"void main() {\n"
+"}\n";
+
+const string phongVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"layout(location = 1) in vec3 aNormal;\n"
+"layout(location = 2) in vec2 aTexCoords;\n"
+"out vec2 TexCoords;\n"
+"out vec3 FragPos;\n"
+"out vec3 Normal;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"void main() {\n"
+"   FragPos = vec3(model * vec4(aPos, 1.0));\n"
+"   Normal = normalize(mat3(transpose(inverse(model))) * aNormal);\n"
+"   TexCoords = aTexCoords;\n"
+"   gl_Position = projection * view * vec4(FragPos, 1.0);\n"
+"}\n";
+
+const string phongFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec2 TexCoords;\n"
+"in vec3 Normal;\n"
+"in vec3 FragPos;\n"
+"uniform vec3 lightColor;\n"
+"uniform vec3 lightPos;\n"
+"uniform vec3 viewPos;\n"
+"uniform sampler2D texture_diffuse1;\n"
+"void main(){\n"
+"   vec4 kd = texture(texture_diffuse1, TexCoords);\n"
+"   float ambientStrength = 0.1;\n"
+"   vec3 ambient = ambientStrength * lightColor;\n"
+"   vec3 lightDir = normalize(lightPos - FragPos);\n"
+"   float diff = max(dot(Normal, lightDir), 0.0);\n"
+"   vec3 diffuse = diff * lightColor;\n"
+"   float specularStrength = 0.5;\n"
+"   vec3 viewDir = normalize(viewPos - FragPos);\n"
+"   vec3 reflectDir = reflect(-lightDir, Normal);\n"
+"   float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);\n"
+"   vec3 specular = specularStrength * spec * lightColor;\n"
+"   FragColor = vec4(ambient + diffuse + specular, 1.0) * kd;\n"
+"}\n";
+
+const string blinnPhongVertexShader =
+"#version 330 core\n"
+"layout (location = 0) in vec3 aPos;\n"
+"layout (location = 1) in vec3 aNormal;\n"
+"layout(location = 2) in vec2 aTexCoords;\n"
+"out vec3 FragPos;\n"
+"out vec3 Normal;\n"
+"out vec2 TexCoords;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"void main() {\n"
+"   FragPos = vec3(model * vec4(aPos, 1.0));\n"
+"   Normal = normalize(mat3(transpose(inverse(model))) * aNormal);\n"
+"   TexCoords = aTexCoords;\n"
+"   gl_Position = projection * view * vec4(FragPos, 1.0);\n"
+"}\n";
+
+const string blinnPhongFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec3 Normal;\n"
+"in vec3 FragPos;\n"
+"in vec2 TexCoords;\n"
+"uniform vec3 ks;\n"
+"uniform vec3 ka;\n"
+"uniform vec3 intensity;\n"
+"uniform vec3 ambLightIntensity;\n"
+"uniform vec3 lightPos;\n"
+"uniform vec3 viewPos;\n"
+"uniform sampler2D texture_diffuse1;\n"
+"void main() {\n"
+"   vec3 kd = texture(texture_diffuse1, TexCoords).rgb;\n"
+"   vec3 viewDir = viewPos - FragPos;\n"
+"   vec3 lightDir = lightPos - FragPos;\n"
+"   vec3 l = normalize(lightDir);\n"
+"   vec3 v = normalize(viewDir);\n"
+"   vec3 half = normalize(v + l);\n"
+"   vec3 realIntensity = intensity / dot(lightDir, lightDir);\n"
+"   vec3 ambient = ka * ambLightIntensity;\n"
+"   vec3 diffuse = kd * realIntensity * max(dot(Normal, l), 0);\n"
+"   vec3 specular = ks * realIntensity * pow(max(dot(Normal, half), 0), 150);\n"
+"   vec3 result = ambient + diffuse + specular;\n"
+"   FragColor = vec4(result, 1.0);\n"
+"}\n";
+
 
 MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) : 
     nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1) {
@@ -9,93 +130,28 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     //modelList.emplace_back(new Model("..\\models\\sara\\sara.obj", "Model 1"));
 
     GLShader diffuseShder;
-    diffuseShder.init(
-        /* An identifying name */
-        "diffuse_shader",
-
-        /* Vertex shader */
-        "#version 330 core\n"
-        "layout(location = 0) in vec3 aPos;\n"
-        "layout(location = 1) in vec3 aNormal;\n"
-        "layout(location = 2) in vec2 aTexCoords;\n"
-
-        "out vec2 TexCoords;\n"
-        "uniform mat4 model;\n"
-        "uniform mat4 view;\n"
-        "uniform mat4 projection;\n"
-
-        "void main(){\n"
-            "TexCoords = aTexCoords;\n"
-            "gl_Position =  projection * view * model * vec4(aPos, 1.0);\n"
-        "}\n",
-
-        /* Fragment shader */
-        "#version 330 core\n"
-        "out vec4 FragColor;\n"
-
-        "in vec2 TexCoords;\n"
-
-        "uniform sampler2D texture_diffuse1;\n"
-
-        "void main(){\n"
-            "FragColor = texture(texture_diffuse1, TexCoords);\n"
-        "}\n"   
-    );
+    diffuseShder.init("diffuse_shader", diffuseVertexShader, diffuseFragShader);
     diffuseShder.bind();
     shaderList.emplace_back(diffuseShder);
 
-    GLShader mShader;
-    mShader.init(
-        /* An identifying name */
-        "a_simple_shader",
+    GLShader phongShader;
+    phongShader.init("phong_shader", phongVertexShader, phongFragShader);
+    phongShader.bind();
+    phongShader.setUniform("viewPos", camera->position);
+    phongShader.setUniform("lightPos", vec3(2.5, 2.5, 2.5));
+    phongShader.setUniform("lightColor", vec3(1.0, 1.0, 1.0));
+    shaderList.emplace_back(phongShader);
 
-        /* Vertex shader */
-        "#version 330 core\n"
-        "layout(location = 0) in vec3 aPos;\n"
-        "layout(location = 1) in vec3 aNormal;\n"
-        "layout(location = 2) in vec2 aTexCoords;\n"
-
-        "out vec2 TexCoords;\n"
-        "out vec3 FragPos;\n"
-        "out vec3 Normal;\n"
-        "uniform mat4 model;\n"
-        "uniform mat4 view;\n"
-        "uniform mat4 projection;\n"
-
-        "void main() {\n"
-        "   FragPos = vec3(model * vec4(aPos, 1.0));\n"
-        "   Normal = normalize(mat3(transpose(inverse(model))) * aNormal);\n"
-        "   TexCoords = aTexCoords;\n"
-        "   gl_Position = projection * view * vec4(FragPos, 1.0);\n"
-        "}\n",
-
-        /* Fragment shader */
-        "#version 330 core\n"
-        "out vec4 FragColor;\n"
-
-        "in vec2 TexCoords;\n"
-        "in vec3 Normal;\n"
-        "in vec3 FragPos;\n"
-        "uniform vec3 lightColor;\n"
-        "uniform vec3 lightPos;\n"
-        "uniform vec3 viewPos;\n"
-        "uniform sampler2D texture_diffuse1;\n"
-
-        "void main(){\n"
-        "   vec4 kd = texture(texture_diffuse1, TexCoords);\n"
-        "   float ambientStrength = 0.1;\n"
-        "   vec3 ambient = ambientStrength * lightColor;\n"
-        "   vec3 lightDir = normalize(lightPos - FragPos);\n"
-        "   float diff = max(dot(Normal, lightDir), 0.0);\n"
-        "   vec3 diffuse = diff * lightColor;\n"
-        "   float specularStrength = 0.5;\n"
-        "   vec3 viewDir = normalize(viewPos - FragPos);\n"
-        "   vec3 reflectDir = reflect(-lightDir, Normal);\n"
-        "   float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);\n"
-        "   vec3 specular = specularStrength * spec * lightColor;\n"
-        "   FragColor = vec4(ambient + diffuse + specular, 1.0) * kd;\n"
-        "}\n"
-    );
+    GLShader blinnPhongShder;
+    blinnPhongShder.init("blinn_phong_shader", blinnPhongVertexShader, blinnPhongFragShader);
+    blinnPhongShder.bind();
+    blinnPhongShder.setUniform("lightPos", vec3(2.5));
+    blinnPhongShder.setUniform("viewPos", camera->position);
+    blinnPhongShder.setUniform("intensity", vec3(100.f));
+    blinnPhongShder.setUniform("ka", vec3(0.005));
+    blinnPhongShder.setUniform("ambLightIntensity", vec3(10.f));
+    blinnPhongShder.setUniform("ks", vec3(0.f));
+    shaderList.emplace_back(blinnPhongShder);
 
     //lightShader.init(
     //    "light_shader",
@@ -161,13 +217,6 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     //camera->translateSpeed = 0.01;
     //camera->scaleSpeed = 0.15;
     //camera->sensitivity = 0.2;
-
-    //modelList.emplace_back(new Model("../models/sara/sara.obj"));
-    mShader.bind();
-    mShader.setUniform("viewPos", camera->position);
-    mShader.setUniform("lightPos", vec3(2.5, 2.5, 2.5));
-    mShader.setUniform("lightColor", vec3(1.0, 1.0, 1.0));
-    shaderList.emplace_back(mShader);
 
     //translate = vec3(0.f);
     //scale = vec3(1.f);
