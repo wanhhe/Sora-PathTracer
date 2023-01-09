@@ -68,7 +68,7 @@ const string phongFragShader =
 "   vec3 lightDir = normalize(lightPos - FragPos);\n"
 "   float diff = max(dot(Normal, lightDir), 0.0);\n"
 "   vec3 diffuse = diff * lightColor;\n"
-"   float specularStrength = 0.5;\n"
+"   float specularStrength = 0.2;\n"
 "   vec3 viewDir = normalize(viewPos - FragPos);\n"
 "   vec3 reflectDir = reflect(-lightDir, Normal);\n"
 "   float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);\n"
@@ -115,7 +115,7 @@ const string blinnPhongFragShader =
 "   vec3 v = normalize(viewDir);\n"
 "   vec3 half = normalize(v + l);\n"
 "   vec3 realIntensity = intensity / dot(lightDir, lightDir);\n"
-"   vec3 ambient = ka * ambLightIntensity;\n"
+"   vec3 ambient = kd * ka * ambLightIntensity;\n"
 "   vec3 diffuse = kd * realIntensity * max(dot(Normal, l), 0);\n"
 "   vec3 specular = ks * realIntensity * pow(max(dot(Normal, half), 0), 150);\n"
 "   vec3 result = ambient + diffuse + specular;\n"
@@ -147,10 +147,10 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     blinnPhongShder.bind();
     blinnPhongShder.setUniform("lightPos", vec3(2.5));
     blinnPhongShder.setUniform("viewPos", camera->position);
-    blinnPhongShder.setUniform("intensity", vec3(100.f));
-    blinnPhongShder.setUniform("ka", vec3(0.005));
-    blinnPhongShder.setUniform("ambLightIntensity", vec3(10.f));
-    blinnPhongShder.setUniform("ks", vec3(0.f));
+    blinnPhongShder.setUniform("intensity", vec3(10.f));
+    blinnPhongShder.setUniform("ka", vec3(0.01f));
+    blinnPhongShder.setUniform("ambLightIntensity", vec3(20.f));
+    blinnPhongShder.setUniform("ks", vec3(0.1f));
     shaderList.emplace_back(blinnPhongShder);
 
     //lightShader.init(
