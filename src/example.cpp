@@ -16,7 +16,7 @@ void toggleAddModelWnd(ExampleApplication* _screen, bool show) {
         wnd.button(Caption{ "open" },
             FixedSize{ 60, 30 },
             ButtonCallback{ [&] {
-                text.setValue(file_dialog({ { "png", "Portable Network Graphics" },{ "txt", "Text file" }, {"obj", "Object"}}, false));
+                text.setValue(file_dialog({ { "png", "Portable Network Graphics" },{ "txt", "Text file" }, {"obj", "Object"}, {"fbx", "FBX"}}, false));
             } });
         wnd.label(Caption{ "Model Name" });
         auto& name = wnd.textbox(IsEditable{ true });
@@ -449,6 +449,8 @@ ExampleApplication::ExampleApplication() : nanogui::Screen(nanogui::Vector2i(140
             return;
         selectedModel->translate.x = x;
         });
+
+    std::cout << dot(vec3(2.f), vec3(2.f)) << std::endl;
 
     auto& translateY = modelLocationWrapper.widget();
     translateY.flexlayout(Orientation::Horizontal);
