@@ -229,8 +229,9 @@ const string mapFragShader =
 "uniform sampler2D texture_diffuse1;\n"
 "uniform sampler2D texture_specular1;\n"
 "uniform sampler2D texture_normal1;\n"
+"uniform sampler2D texture_emission1;\n"
 "uniform bool bump;\n"
-"uniform bool spemap;\n"
+"uniform bool sepmap;\n"
 "void main(){\n"
 "   vec3 normal;\n"
 "   if (bump) normal = texture(texture_normal1, TexCoords).rgb;\n"
@@ -243,11 +244,103 @@ const string mapFragShader =
 "   vec3 diffuse = diff * color;\n"
 "   vec3 viewDir = normalize(TangentViewPos - TangentFragPos);\n"
 "   vec3 halfDir = normalize(lightDir + viewDir);\n"
-"   float spec = pow(max(dot(normal, halfDir), 0), 64);\n"
-"   vec3 specular = spec * texture(texture_specular1, TexCoords).rgb;\n"
-"   FragColor = vec4(ambient + diffuse + specular, 1.0f);\n"
+"   float spec = pow(max(dot(normal, halfDir), 0), 160);\n"
+"   vec3 specular;\n"
+"   if (sepmap) specular = spec * texture(texture_specular1, TexCoords).rgb;"
+"   else specular = spec * vec3(0.2f); \n"
+"   vec3 emission = texture(texture_emission1, TexCoords).rgb;\n"
+"   FragColor = vec4(ambient + diffuse + specular + emission, 1.0f);\n"
 "}\n";
 
+const string cookTorranceVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"layout(location = 1) in vec3 aNormal;\n"
+"layout(location = 2) in vec2 aTexCoords;\n"
+"out vec2 TexCoords\n"
+"out vec3 WorldPos;\n"
+"out vec3 Normal;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"void main() {\n"
+"   TexCoords = aTexCoords;\n"
+"   WorldPos = vec3(model * vec4(aPos, 1.0));\n"
+"   Normal = mat3(model) * aNormal;\n"
+"   gl_Position = projection * view * vec4(WorldPos, 1.0);\n"
+"}\n";
+
+const string cookTorranceFragShader =
+"#version 330 core"
+"out vec4 FragColor;\n"
+"in vec2 TexCoords\n"
+"in vec3 WorldPos;\n"
+"in vec3 Normal;\n"
+"uniform vec3 viewPos;\n"
+"uniform vec3 albedo;\n"
+"uniform float metallic;\n"
+"uniform float roughness;\n"
+"uniform float ao;\n"
+"uniform vec3 lightPosition[4];\n"
+"uniform vec3 lightColors[4];\n"
+"const float PI = 3.14159265359;\n"
+"vec3 fresnelSchlick(float cosTheta, vec3 F0) {\n"
+"   return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);"
+"}\n"
+"float DistributionGGX(vec3 N, vec3 H, float roughness) {\n"
+"   float a = roughness * roughness;\n"
+"   float a2 = a * a;\n"
+"   float NdotH = max(dot(N, H), 0.0);\n"
+"   float NdotH2 = NdotH * NdotH;\n"
+"   float nom = a2;\n"
+"   float denom = (NdotH2 * (a2 - 1.0) + 1.0);\n"
+"   denom = PI * denom * denom;\n"
+"   return nom / denom;\n"
+"}\n"
+"float GeometrySchlickGGX(float NdotV, float roughness) {\n"
+"   float r = (roughness + 1.0);\n"
+"   float k = (r * r) / 8.0;\n"
+"   float nom = NdotV;\n"
+"   float denom = NdotV * (1.0 - k) + k;\n"
+"   return nom / denom;\n"
+"}\n"
+"float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {\n"
+"   float NdotV = max(dot(N, V), 0.0);\n"
+"   float NdotL = max(dot(N, L), 0.0);\n"
+"   float ggx2 = GeometrySchlickGGX(NdotV, roughness);\n"
+"   float ggx1 = GeometrySchlickGGX(NdotL, roughness);\n"
+"   return ggx1 * ggx2;\n"
+"}\n"
+"void main() {\n"
+"   vec3 N = normalize(Normal);\n"
+"   vec3 V = normalize(viewPos - WorldPos;\n"
+"   vec3 F0 = vec3(0.04);\n"
+"   F0 = mix(F0, albedo, metallic);\n"
+"   vec3 Lo = vec3(0.0);\n"
+"   for (int i = 0; i < 4; i++) {\n"
+"       vec3 L = normalize(lightPosition[i] - WorldPos);\n"
+"       vec3 H = normalize(L + V);\n"
+"       float distance = length(lightPosition[i] - WorldPos);\n"
+"       float attenuation = 1.0 / (distance * distance);\n"
+"       vec3 radiance = lightColor[i] * attenuation;\n"
+"       vec3 F = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), F0);\n"
+"       float G = GeometrySmith(N, V, L, roughness);\n"
+"       float NDF = DistributionGGX(N, H, roughness);\n"
+"       vec3 numerator = NDF * G * F;\n"
+"       vec3 NdotL = max(dot(N, L), 0.0);\n"
+"       float denominator = 4.0 * max(dot(N, V), 0.0) * NdotL + 0.0001;\n"
+"       vec3 specular = numerator / denominator;\n"
+"       vec3 Ks = F;\n"
+"       vec3 Kd = vec3(1.0) - Ks;\n"
+"       kd *= 1.0 - metallic;\n"
+"       Lo += (Kd * albedo / PI + specular) * radiance * NdotL;\n"
+"   }\n"
+"   vec3 ambient = vec3(0.03) * albedo * ao;\n"
+"   vec3 color = ambient + Lo;\n"
+"   color = color / (color + vec3(1.0));\n"
+"   color = pow(color, vec3(1.0 / 2.2));\n"
+"   FragColor = vec4(color, 1.0);\n"
+"}\n";
 
 MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) : 
     nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1) {
@@ -286,12 +379,37 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     bumpShader.setUniform("viewPos", camera->position);
     shaderList.emplace_back(bumpShader);
 
-    GLShader mapShader;
-    mapShader.init("map_shader", mapVertexShader, mapFragShader);
-    mapShader.bind();
-    mapShader.setUniform("lightPos", vec3(2.5));
-    mapShader.setUniform("viewPos", camera->position);
-    shaderList.emplace_back(mapShader);
+    //GLShader mapShader;
+    //mapShader.init("map_shader", mapVertexShader, mapFragShader);
+    //mapShader.bind();
+    //mapShader.setUniform("lightPos", vec3(2.5));
+    //mapShader.setUniform("viewPos", camera->position);
+    //shaderList.emplace_back(mapShader);
+
+    GLShader cooktorranceShader;
+    glm::vec3 lightPositions[] = {
+        glm::vec3(-10.0f,  10.0f, 10.0f),
+        glm::vec3(10.0f,  10.0f, 10.0f),
+        glm::vec3(-10.0f, -10.0f, 10.0f),
+        glm::vec3(10.0f, -10.0f, 10.0f),
+    };
+    glm::vec3 lightColors[] = {
+        glm::vec3(300.0f, 300.0f, 300.0f),
+        glm::vec3(300.0f, 300.0f, 300.0f),
+        glm::vec3(300.0f, 300.0f, 300.0f),
+        glm::vec3(300.0f, 300.0f, 300.0f)
+    };
+    for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i)
+    {
+        cooktorranceShader.setUniform("lightPositions[" + std::to_string(i) + "]", lightPositions[i]);
+        cooktorranceShader.setUniform("lightColors[" + std::to_string(i) + "]", lightColors[i]);
+    }
+    cooktorranceShader.setUniform("roughenss", 0.2);
+    cooktorranceShader.setUniform("metallic", 0.2);
+    cooktorranceShader.setUniform("viewPos", camera->position);
+    cooktorranceShader.setUniform("ao", 1.0f);
+    cooktorranceShader.setUniform("albedo", vec3(0.5f, 0.0f, 0.0f));
+
 
     //lightShader.init(
     //    "light_shader",

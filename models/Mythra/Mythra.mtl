@@ -85,6 +85,7 @@ illum 1
 map_Kd BL000201_BODY_COL.png
 bump BL000201_BODY_NRM.png
 map_Ks BL000201_BODY_SPC.png
+map_emissive BL000201_GLO.png
 
 newmtl m16
 Ns 4.999998

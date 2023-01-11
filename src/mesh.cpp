@@ -45,6 +45,7 @@ void Mesh::draw(nanogui::GLShader shader) {
     unsigned int diffuseNr = 1;
     unsigned int specularNr = 1;
     unsigned int normalNr = 1;
+    unsigned int emissionNr = 1;
     for (unsigned int i = 0; i < textures.size(); i++) {
         glActiveTexture(GL_TEXTURE0 + i);
         string number;
@@ -61,6 +62,10 @@ void Mesh::draw(nanogui::GLShader shader) {
             number = std::to_string(normalNr);
             normalNr++;
         }
+        else if (name == "texture_emission") {
+            number = std::to_string(emissionNr);
+            emissionNr++;
+        }
         glUniform1i(glGetUniformLocation(shader.getShaderID(), (name + number).c_str()), i);
         glBindTexture(GL_TEXTURE_2D, textures[i].id);
     }
@@ -70,7 +75,7 @@ void Mesh::draw(nanogui::GLShader shader) {
     glBindVertexArray(VAO);
     if (shader.uniform("bump", true)) shader.setUniform("bump", 1);
     else shader.setUniform("bump", 0);
-    if (specularNr > 1) shader.setUniform("spemap", 1);
+    if (specularNr > 1) shader.setUniform("sepmap", 1);
     else shader.setUniform("sepmap", 0);
 
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);

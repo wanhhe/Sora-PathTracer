@@ -99,6 +99,9 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 		textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
 		vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
 		textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
+		vector<Texture> emissionMaps = loadMaterialTextures(material, aiTextureType_EMISSIVE, "texture_emission");
+		if (emissionMaps.size() > 0) std::cout << "load" << std::endl;
+		textures.insert(textures.end(), emissionMaps.begin(), emissionMaps.end());
 	}
 	return Mesh(vertices, indices, textures);
 }
