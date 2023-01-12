@@ -257,7 +257,7 @@ const string cookTorranceVertexShader =
 "layout(location = 0) in vec3 aPos;\n"
 "layout(location = 1) in vec3 aNormal;\n"
 "layout(location = 2) in vec2 aTexCoords;\n"
-"out vec2 TexCoords\n"
+"out vec2 TexCoords;\n"
 "out vec3 WorldPos;\n"
 "out vec3 Normal;\n"
 "uniform mat4 model;\n"
@@ -271,9 +271,9 @@ const string cookTorranceVertexShader =
 "}\n";
 
 const string cookTorranceFragShader =
-"#version 330 core"
+"#version 330 core\n"
 "out vec4 FragColor;\n"
-"in vec2 TexCoords\n"
+"in vec2 TexCoords;\n"
 "in vec3 WorldPos;\n"
 "in vec3 Normal;\n"
 "uniform vec3 viewPos;\n"
@@ -313,7 +313,7 @@ const string cookTorranceFragShader =
 "}\n"
 "void main() {\n"
 "   vec3 N = normalize(Normal);\n"
-"   vec3 V = normalize(viewPos - WorldPos;\n"
+"   vec3 V = normalize(viewPos - WorldPos);\n"
 "   vec3 F0 = vec3(0.04);\n"
 "   F0 = mix(F0, albedo, metallic);\n"
 "   vec3 Lo = vec3(0.0);\n"
@@ -322,17 +322,17 @@ const string cookTorranceFragShader =
 "       vec3 H = normalize(L + V);\n"
 "       float distance = length(lightPosition[i] - WorldPos);\n"
 "       float attenuation = 1.0 / (distance * distance);\n"
-"       vec3 radiance = lightColor[i] * attenuation;\n"
+"       vec3 radiance = lightColors[i] * attenuation;\n"
 "       vec3 F = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), F0);\n"
 "       float G = GeometrySmith(N, V, L, roughness);\n"
 "       float NDF = DistributionGGX(N, H, roughness);\n"
 "       vec3 numerator = NDF * G * F;\n"
-"       vec3 NdotL = max(dot(N, L), 0.0);\n"
+"       float NdotL = max(dot(N, L), 0.0);\n"
 "       float denominator = 4.0 * max(dot(N, V), 0.0) * NdotL + 0.0001;\n"
 "       vec3 specular = numerator / denominator;\n"
 "       vec3 Ks = F;\n"
 "       vec3 Kd = vec3(1.0) - Ks;\n"
-"       kd *= 1.0 - metallic;\n"
+"       Kd *= 1.0 - metallic;\n"
 "       Lo += (Kd * albedo / PI + specular) * radiance * NdotL;\n"
 "   }\n"
 "   vec3 ambient = vec3(0.03) * albedo * ao;\n"
@@ -387,6 +387,8 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     //shaderList.emplace_back(mapShader);
 
     GLShader cooktorranceShader;
+    cooktorranceShader.init("cook_torrance_pbr_shader", cookTorranceVertexShader, cookTorranceFragShader);
+    cooktorranceShader.bind();
     glm::vec3 lightPositions[] = {
         glm::vec3(-10.0f,  10.0f, 10.0f),
         glm::vec3(10.0f,  10.0f, 10.0f),
@@ -401,15 +403,15 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     };
     for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i)
     {
-        cooktorranceShader.setUniform("lightPositions[" + std::to_string(i) + "]", lightPositions[i]);
+        cooktorranceShader.setUniform("lightPosition[" + std::to_string(i) + "]", lightPositions[i]);
         cooktorranceShader.setUniform("lightColors[" + std::to_string(i) + "]", lightColors[i]);
     }
-    cooktorranceShader.setUniform("roughenss", 0.2);
-    cooktorranceShader.setUniform("metallic", 0.2);
+    cooktorranceShader.setUniform("roughness", 0.2);
+    cooktorranceShader.setUniform("metallic", 0.8);
     cooktorranceShader.setUniform("viewPos", camera->position);
     cooktorranceShader.setUniform("ao", 1.0f);
     cooktorranceShader.setUniform("albedo", vec3(0.5f, 0.0f, 0.0f));
-
+    shaderList.emplace_back(cooktorranceShader);
 
     //lightShader.init(
     //    "light_shader",
