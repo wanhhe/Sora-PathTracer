@@ -29,7 +29,7 @@ add_executable(${PROJECT_NAME}
     #include/scene.h
     #include/object.h
     #include/triangle.h
-    include/ray.h
+    "include/ray.h"
     #include/material.h
     #include/intersection.h
     include/camera.h
@@ -42,6 +42,8 @@ add_executable(${PROJECT_NAME}
     include/canvas.h
     include/example.h
     #include/shader.h
+    "include/light.h"
+    
 
     # sources
     src/main.cpp
@@ -60,7 +62,9 @@ add_executable(${PROJECT_NAME}
     src/mesh.cpp
     src/model.cpp
     #src/shader.cpp
- "include/light.h" "src/light.cpp")
+    "src/light.cpp"
+    
+)
 
 find_package(Threads REQUIRED)
 target_link_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib)

@@ -9,7 +9,7 @@
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 
-#define PI 3.1415926535
+#define PI 3.14159265359
 #define TWO_PI 6.283185307
 #define INV_PI 0.31830988618
 #define INV_TWO_PI 0.15915494309
@@ -77,6 +77,12 @@ enum LightTypeEnum {
 enum LightShapeEnum {
     SQUARE = 0,
     CIRCULAR
+};
+
+enum PreLoadEnum {
+    PRELOAD_NONE = 0,
+    PBRMAPBALLS,
+    KLUDIAVALENTZ
 };
 
 typedef struct Config {

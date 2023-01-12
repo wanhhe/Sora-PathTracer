@@ -1,4 +1,5 @@
 #include "canvas.h"
+#include "stb_image.h"
 
 const string diffuseVertexShader =
 "#version 330 core\n"
@@ -342,12 +343,118 @@ const string cookTorranceFragShader =
 "   FragColor = vec4(color, 1.0);\n"
 "}\n";
 
+const string pbrMapVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"layout(location = 1) in vec3 aNormal;\n"
+"layout(location = 2) in vec2 aTexCoords;\n"
+"out vec2 TexCoords;\n"
+"out vec3 WorldPos;\n"
+"out vec3 Normal;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"void main() {\n"
+"   TexCoords = aTexCoords;\n"
+"   WorldPos = vec3(model * vec4(aPos, 1.0));\n"
+"   Normal = mat3(model) * aNormal;\n"
+"   gl_Position = projection * view * vec4(WorldPos, 1.0);\n"
+"}\n";
+
+const string pbrMapFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec2 TexCoords;\n"
+"in vec3 WorldPos;\n"
+"in vec3 Normal;\n"
+"uniform vec3 viewPos;\n"
+"uniform sampler2D albedoMap;\n"
+"uniform sampler2D normalMap;\n"
+"uniform sampler2D metallicMap;\n"
+"uniform sampler2D roughnessMap;\n"
+"uniform sampler2D aoMap;\n"
+"uniform vec3 lightPosition[4];\n"
+"uniform vec3 lightColors[4];\n"
+"const float PI = 3.14159265359;\n"
+"vec3 getNormalFromMap() {\n"
+"   vec3 tangentNormal = texture(normalMap, TexCoords).xyz * 2.0 - 1.0;\n"
+"   vec3 Q1 = dFdx(WorldPos);\n"
+"   vec3 Q2 = dFdy(WorldPos);\n"
+"   vec2 st1 = dFdx(TexCoords);\n"
+"   vec2 st2 = dFdy(TexCoords);\n"
+"   vec3 N = normalize(Normal);\n"
+"   vec3 T = normalize(Q1 * st2.t - Q2 * st1.t);\n"
+"   vec3 B = -normalize(cross(N, T));\n"
+"   mat3 TBN = mat3(T, B, N);\n"
+"   return normalize(TBN * tangentNormal);\n"
+"}\n"
+"vec3 fresnelSchlick(float cosTheta, vec3 F0) {\n"
+"   return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);"
+"}\n"
+"float DistributionGGX(vec3 N, vec3 H, float roughness) {\n"
+"   float a = roughness * roughness;\n"
+"   float a2 = a * a;\n"
+"   float NdotH = max(dot(N, H), 0.0);\n"
+"   float NdotH2 = NdotH * NdotH;\n"
+"   float nom = a2;\n"
+"   float denom = (NdotH2 * (a2 - 1.0) + 1.0);\n"
+"   denom = PI * denom * denom;\n"
+"   return nom / denom;\n"
+"}\n"
+"float GeometrySchlickGGX(float NdotV, float roughness) {\n"
+"   float r = (roughness + 1.0);\n"
+"   float k = (r * r) / 8.0;\n"
+"   float nom = NdotV;\n"
+"   float denom = NdotV * (1.0 - k) + k;\n"
+"   return nom / denom;\n"
+"}\n"
+"float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {\n"
+"   float NdotV = max(dot(N, V), 0.0);\n"
+"   float NdotL = max(dot(N, L), 0.0);\n"
+"   float ggx2 = GeometrySchlickGGX(NdotV, roughness);\n"
+"   float ggx1 = GeometrySchlickGGX(NdotL, roughness);\n"
+"   return ggx1 * ggx2;\n"
+"}\n"
+"void main() {\n"
+"   vec3 albedo = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));\n"
+"   float metallic = texture(metallicMap, TexCoords).r;\n"
+"   float roughness = texture(roughnessMap, TexCoords).r;\n"
+"   float ao = texture(aoMap, TexCoords).r;\n"
+"   vec3 N = getNormalFromMap();\n"
+"   vec3 V = normalize(viewPos - WorldPos);\n"
+"   vec3 F0 = vec3(0.04);\n"
+"   F0 = mix(F0, albedo, metallic);\n"
+"   vec3 Lo = vec3(0.0);\n"
+"   for (int i = 0; i < 4; i++) {\n"
+"       vec3 L = normalize(lightPosition[i] - WorldPos);\n"
+"       vec3 H = normalize(L + V);\n"
+"       float distance = length(lightPosition[i] - WorldPos);\n"
+"       float attenuation = 1.0 / (distance * distance);\n"
+"       vec3 radiance = lightColors[i] * attenuation;\n"
+"       vec3 F = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), F0);\n"
+"       float G = GeometrySmith(N, V, L, roughness);\n"
+"       float NDF = DistributionGGX(N, H, roughness);\n"
+"       vec3 numerator = NDF * G * F;\n"
+"       float NdotL = max(dot(N, L), 0.0);\n"
+"       float denominator = 4.0 * max(dot(N, V), 0.0) * NdotL + 0.0001;\n"
+"       vec3 specular = numerator / denominator;\n"
+"       vec3 Ks = F;\n"
+"       vec3 Kd = vec3(1.0) - Ks;\n"
+"       Kd *= 1.0 - metallic;\n"
+"       Lo += (Kd * albedo / PI + specular) * radiance * NdotL;\n"
+"   }\n"
+"   vec3 ambient = vec3(0.03) * albedo * ao;\n"
+"   vec3 color = ambient + Lo;\n"
+"   color = color / (color + vec3(1.0));\n"
+"   color = pow(color, vec3(1.0 / 2.2));\n"
+"   FragColor = vec4(color, 1.0);\n"
+"}\n";
+
 MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) : 
-    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1) {
+    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(PBRMAPBALLS) {
     using namespace nanogui;
 
     //modelList.emplace_back(new Model("..\\models\\sara\\sara.obj", "Model 1"));
-
     GLShader diffuseShder;
     diffuseShder.init("diffuse_shader", diffuseVertexShader, diffuseFragShader);
     diffuseShder.bind();
@@ -412,6 +519,12 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     cooktorranceShader.setUniform("ao", 1.0f);
     cooktorranceShader.setUniform("albedo", vec3(0.5f, 0.0f, 0.0f));
     shaderList.emplace_back(cooktorranceShader);
+
+    GLShader pbrMapShader;
+    pbrMapShader.init("pbr_map_shader", pbrMapVertexShader, pbrMapFragShader);
+    pbrMapShader.bind();
+    pbrMapShader.setUniform("viewPos", camera->position);
+    shaderList.emplace_back(pbrMapShader);
 
     //lightShader.init(
     //    "light_shader",
@@ -494,66 +607,70 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
 
 void MyGLCanvas::drawGL() {
     using namespace nanogui;
+    if (preload == PRELOAD_NONE) {
+        if (modelList.size() == 0) return;
+        updateCamera();
+        //std::cout << camera->position.x << " " << camera->position.y << " " << camera->position.z << std::endl;
+        //std::cout << camera->target.x << " " << camera->target.y << " " << camera->target.z << std::endl;
+        //std::cout << std::endl;
+        view = lookAt(camera->position, camera->target, camera->up);
+        projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
+        //view = lookAt(vec3(0.0f, 0.0f, 3.f), vec3(0.f, 0.f, 2.f), vec3(0, 1.f, 0));
+        //projection = glm::perspective(radians(camera->fov), 1.0f, 0.1f, 100.0f);
+        //projection = glm::perspective(radians(45.f), 1.0f, 0.1f, 100.0f);
 
-    //mShader.bind();
-    //shaderList[0].bind();
+        //model = glm::translate(model, translate);
+        //model = glm::scale(model, scale);
+        //mvp = projection * view * model;
 
-    if (modelList.size() == 0) return;
-    updateCamera();
-    //std::cout << camera->position.x << " " << camera->position.y << " " << camera->position.z << std::endl;
-    //std::cout << camera->target.x << " " << camera->target.y << " " << camera->target.z << std::endl;
-    //std::cout << std::endl;
-    view = lookAt(camera->position, camera->target, camera->up);
-    projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
-    //view = lookAt(vec3(0.0f, 0.0f, 3.f), vec3(0.f, 0.f, 2.f), vec3(0, 1.f, 0));
-    //projection = glm::perspective(radians(camera->fov), 1.0f, 0.1f, 100.0f);
-    //projection = glm::perspective(radians(45.f), 1.0f, 0.1f, 100.0f);
-
-    //model = glm::translate(model, translate);
-    //model = glm::scale(model, scale);
-    //mvp = projection * view * model;
-
-    //mShader.setUniform("model", model);
-    //mShader.setUniform("view", view);
-    //mShader.setUniform("projection", projection);
-    for (int i = 0; i < modelList.size(); i++) {
-        model[0][0] = 1.0f;
-        model[0][1] = 0.0f;
-        model[0][2] = 0.0f;
-        model[0][3] = 0.0f;
-        model[1][0] = 0.0f;
-        model[1][1] = 1.0f;
-        model[1][2] = 0.0f;
-        model[1][3] = 0.0f;
-        model[2][0] = 0.0f;
-        model[2][1] = 0.0f;
-        model[2][2] = 1.0f;
-        model[2][3] = 0.0f;
-        model[3][0] = 0.0f;
-        model[3][1] = 0.0f;
-        model[3][2] = 0.0f;
-        model[3][3] = 1.0f;
-        model = glm::translate(model, modelList[i]->translate);
-        model = glm::scale(model, modelList[i]->scale);
-        shaderList[modelList[i]->shaderIndex].bind();
-        shaderList[modelList[i]->shaderIndex].setUniform("model", model);
-        shaderList[modelList[i]->shaderIndex].setUniform("view", view);
-        shaderList[modelList[i]->shaderIndex].setUniform("projection", projection);
-        shaderList[modelList[i]->shaderIndex].setUniform("viewPos", camera->position);
-        shaderList[modelList[i]->shaderIndex].setUniform("roughness", modelList[i]->roughenss);
-        shaderList[modelList[i]->shaderIndex].setUniform("metallic", modelList[i]->metallic);
-        glEnable(GL_DEPTH_TEST);
-        //modelList[i]->draw(mShader);
-        modelList[i]->draw(shaderList[modelList[i]->shaderIndex]);
-        glDisable(GL_DEPTH_TEST);
+        //mShader.setUniform("model", model);
+        //mShader.setUniform("view", view);
+        //mShader.setUniform("projection", projection);
+        for (int i = 0; i < modelList.size(); i++) {
+            model[0][0] = 1.0f;
+            model[0][1] = 0.0f;
+            model[0][2] = 0.0f;
+            model[0][3] = 0.0f;
+            model[1][0] = 0.0f;
+            model[1][1] = 1.0f;
+            model[1][2] = 0.0f;
+            model[1][3] = 0.0f;
+            model[2][0] = 0.0f;
+            model[2][1] = 0.0f;
+            model[2][2] = 1.0f;
+            model[2][3] = 0.0f;
+            model[3][0] = 0.0f;
+            model[3][1] = 0.0f;
+            model[3][2] = 0.0f;
+            model[3][3] = 1.0f;
+            model = glm::translate(model, modelList[i]->translate);
+            model = glm::scale(model, modelList[i]->scale);
+            shaderList[modelList[i]->shaderIndex].bind();
+            shaderList[modelList[i]->shaderIndex].setUniform("model", model);
+            shaderList[modelList[i]->shaderIndex].setUniform("view", view);
+            shaderList[modelList[i]->shaderIndex].setUniform("projection", projection);
+            shaderList[modelList[i]->shaderIndex].setUniform("viewPos", camera->position);
+            shaderList[modelList[i]->shaderIndex].setUniform("roughness", modelList[i]->roughenss);
+            shaderList[modelList[i]->shaderIndex].setUniform("metallic", modelList[i]->metallic);
+            glEnable(GL_DEPTH_TEST);
+            //modelList[i]->draw(mShader);
+            modelList[i]->draw(shaderList[modelList[i]->shaderIndex]);
+            glDisable(GL_DEPTH_TEST);
+        }
+        //lightShader.bind();
+        //lightShader.setUniform("lightMVP", projection * view);
+        //glEnable(GL_DEPTH_TEST);
+        /* Draw 12 triangles starting at index 0 */
+        //mShader.drawIndexed(GL_TRIANGLES, 0, 12);
+        //lightShader.drawIndexed(GL_TRIANGLES, 0, 12);
+        //glDisable(GL_DEPTH_TEST);
     }
-    //lightShader.bind();
-    //lightShader.setUniform("lightMVP", projection * view);
-    //glEnable(GL_DEPTH_TEST);
-    /* Draw 12 triangles starting at index 0 */
-    //mShader.drawIndexed(GL_TRIANGLES, 0, 12);
-    //lightShader.drawIndexed(GL_TRIANGLES, 0, 12);
-    //glDisable(GL_DEPTH_TEST);
+    else if (preload == PBRMAPBALLS) {
+        preloadPbrMapBalls();
+    }
+    else if (preload == KLUDIAVALENTZ) {
+        preloadKlaudiaValentz();
+    }
 }
 
 string MyGLCanvas::addModel(const string& path, const string& name) {
@@ -631,6 +748,213 @@ Light* MyGLCanvas::firstLight() {
 
 Model* MyGLCanvas::firstModel() {
     return modelList[0];
+}
+
+unsigned int sphereVAO = 0;
+unsigned int indexCount;
+void MyGLCanvas::preloadPbrMapBalls() {
+    shaderList[5].bind();
+    if (sphereVAO == 0)
+    {
+        shaderList[5].setUniform("albedoMap", 1);
+        shaderList[5].setUniform("normalMap", 2);
+        shaderList[5].setUniform("metallicMap", 3);
+        shaderList[5].setUniform("roughnessMap", 4);
+        shaderList[5].setUniform("aoMap", 5);
+        unsigned int albedo = loadTexture("..\\models\\rustediron1-alt2-bl\\rustediron2_basecolor.png");
+        unsigned int normal = loadTexture("..\\models\\rustediron1-alt2-bl\\rustediron2_normal.png");
+        unsigned int metallic = loadTexture("..\\models\\rustediron1-alt2-bl\\rustediron2_metallic.png");
+        unsigned int roughness = loadTexture("..\\models\\rustediron1-alt2-bl\\rustediron2_roughness.png");
+        unsigned int ao = loadTexture("..\\models\\rustediron1-alt2-bl\\rustediron2_ambient.png");
+        std::cout << albedo << " " << normal << " " << metallic << " " << roughness << " " << ao << std::endl;
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, albedo);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, normal);
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, metallic);
+        glActiveTexture(GL_TEXTURE4);
+        glBindTexture(GL_TEXTURE_2D, roughness);
+        glActiveTexture(GL_TEXTURE5);
+        glBindTexture(GL_TEXTURE_2D, ao);
+
+        glGenVertexArrays(1, &sphereVAO);
+
+        unsigned int vbo, ebo;
+        glGenBuffers(1, &vbo);
+        glGenBuffers(1, &ebo);
+
+        std::vector<vec3> positions;
+        std::vector<vec2> uv;
+        std::vector<vec3> normals;
+        std::vector<unsigned int> indices;
+
+        const unsigned int X_SEGMENTS = 64;
+        const unsigned int Y_SEGMENTS = 64;
+        for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
+        {
+            for (unsigned int y = 0; y <= Y_SEGMENTS; ++y)
+            {
+                float xSegment = (float)x / (float)X_SEGMENTS;
+                float ySegment = (float)y / (float)Y_SEGMENTS;
+                float xPos = std::cos(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+                float yPos = std::cos(ySegment * PI);
+                float zPos = std::sin(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+
+                positions.push_back(glm::vec3(xPos, yPos, zPos));
+                uv.push_back(glm::vec2(xSegment, ySegment));
+                normals.push_back(glm::vec3(xPos, yPos, zPos));
+            }
+        }
+
+        bool oddRow = false;
+        for (unsigned int y = 0; y < Y_SEGMENTS; ++y)
+        {
+            if (!oddRow) // even rows: y == 0, y == 2; and so on
+            {
+                for (unsigned int x = 0; x <= X_SEGMENTS; ++x)
+                {
+                    indices.push_back(y * (X_SEGMENTS + 1) + x);
+                    indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
+                }
+            }
+            else
+            {
+                for (int x = X_SEGMENTS; x >= 0; --x)
+                {
+                    indices.push_back((y + 1) * (X_SEGMENTS + 1) + x);
+                    indices.push_back(y * (X_SEGMENTS + 1) + x);
+                }
+            }
+            oddRow = !oddRow;
+        }
+        indexCount = static_cast<unsigned int>(indices.size());
+
+        std::vector<float> data;
+        for (unsigned int i = 0; i < positions.size(); ++i)
+        {
+            data.push_back(positions[i].x);
+            data.push_back(positions[i].y);
+            data.push_back(positions[i].z);
+            if (normals.size() > 0)
+            {
+                data.push_back(normals[i].x);
+                data.push_back(normals[i].y);
+                data.push_back(normals[i].z);
+            }
+            if (uv.size() > 0)
+            {
+                data.push_back(uv[i].x);
+                data.push_back(uv[i].y);
+            }
+        }
+        glBindVertexArray(sphereVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(float), &data[0], GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+        unsigned int stride = (3 + 2 + 3) * sizeof(float);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
+    }
+    updateCamera();
+    view = lookAt(camera->position, camera->target, camera->up);
+    projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
+    shaderList[5].setUniform("view", view);
+    shaderList[5].setUniform("projection", projection);
+    shaderList[5].setUniform("viewPos", camera->position);
+
+    int nrRows = 7;
+    int nrColumns = 7;
+    float spacing = 2.5;
+    glm::mat4 model = glm::mat4(1.0f);
+    glm::vec3 lightPositions[] = {
+        glm::vec3(-10.0f,  10.0f, 10.0f),
+        glm::vec3(10.0f,  10.0f, 10.0f),
+        glm::vec3(-10.0f, -10.0f, 10.0f),
+        glm::vec3(10.0f, -10.0f, 10.0f),
+    };
+    glm::vec3 lightColors[] = {
+        glm::vec3(150, 150.0f, 150.0f),
+        glm::vec3(150, 150.0f, 150.0f),
+        glm::vec3(150, 150.0f, 150.0f),
+        glm::vec3(150, 150.0f, 150.0f)
+    };
+
+    for (unsigned int i = 0; i < 4; ++i)
+    {
+        glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
+        shaderList[5].setUniform("lightPosition[" + std::to_string(i) + "]", newPos);
+        shaderList[5].setUniform("lightColors[" + std::to_string(i) + "]", lightColors[i]);
+    }
+
+    for (int row = 0; row < nrRows; ++row)
+    {
+        for (int col = 0; col < nrColumns; ++col)
+        {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(
+                (float)(col - (nrColumns / 2)) * spacing,
+                (float)(row - (nrRows / 2)) * spacing,
+                0.0f
+            ));
+            shaderList[5].setUniform("model", model);
+            glBindVertexArray(sphereVAO);
+            glEnable(GL_DEPTH_TEST);
+            glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
+            glDisable(GL_DEPTH_TEST);
+        }
+    }
+}
+
+unsigned int klaudiaVAO = 0;
+void MyGLCanvas::preloadKlaudiaValentz() {
+    string id = addModel("..\\models\\KlaudiaValentz\\KlaudiaValentz.obj", "Klaudia");
+    Model* model = modelList[0];
+    model->shaderIndex = 4;
+    model->translate = vec3(0.0);
+    loadTexture("..\\models\\KlaudiaValentz\\RaycastEffects\\Boyd\\");
+}
+
+unsigned int MyGLCanvas::loadTexture(char const* path)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data)
+    {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "Texture failed to load at path: " << path << std::endl;
+        stbi_image_free(data);
+    }
+
+    return textureID;
 }
 
 bool MyGLCanvas::scrollEvent(const nanogui::Vector2i& p, const nanogui::Vector2f& rel) {
