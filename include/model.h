@@ -16,6 +16,8 @@ public:
 	vec3 scale;
 	string name;
 	int shaderIndex;
+	float roughenss;
+	float metallic;
 
 private:
 	vector<Mesh> meshes;

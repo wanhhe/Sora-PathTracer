@@ -10,6 +10,8 @@ Model::Model(const string& path, const string& _name) {
 	translate = vec3(0.f);
 	scale = vec3(1.f);
 	name = _name;
+	roughenss = 0.2;
+	metallic = 0.8;
 }
 
 void Model::draw(nanogui::GLShader& shader) {

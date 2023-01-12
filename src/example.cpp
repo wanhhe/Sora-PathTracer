@@ -662,7 +662,42 @@ ExampleApplication::ExampleApplication() : nanogui::Screen(nanogui::Vector2i(140
         CaptionFont{ "sans" },
         RelativeSize{ 0.5, 0 });
     auto& Ka = parameterChoice.wdg<FloatBox<float>>();
-    
+
+    modelMaterialWrapper.label(Caption{ "PBR" }, CaptionFont{ "sans-bold" });
+    auto& roughnessSetting = modelMaterialWrapper.widget();
+    roughnessSetting.flexlayout(Orientation::Horizontal);
+    roughnessSetting.label(Caption{ "Roughenss" },
+        CaptionFont{ "sans" },
+        RelativeSize{ 0.5, 0 });
+    auto& roughness = roughnessSetting.wdg<FloatBox<float>>();
+    roughness.setMinMaxValues(0.0, 1.0);
+    roughness.setEditable(true);
+    roughness.setSpinnable(true);
+    roughness.setValue(0.2);
+    roughness.setValueIncrement(0.05);
+    roughness.setCallback([this](float x) {
+        if (selectedModel == nullptr)
+            return;
+        selectedModel->roughenss = x;
+        });
+
+    auto& metallicSetting = modelMaterialWrapper.widget();
+    metallicSetting.flexlayout(Orientation::Horizontal);
+    metallicSetting.label(Caption{ "Metallic" },
+        CaptionFont{ "sans" },
+        RelativeSize{ 0.5, 0 });
+    auto& metallic = metallicSetting.wdg<FloatBox<float>>();
+    metallic.setMinMaxValues(0.0, 1.0);
+    metallic.setEditable(true);
+    metallic.setSpinnable(true);
+    metallic.setValue(0.8);
+    metallic.setValueIncrement(0.05);
+    metallic.setCallback([this](float x) {
+        if (selectedModel == nullptr)
+            return;
+        selectedModel->metallic = x;
+        });
+
 
     modelTabWidget.setActiveTab(0);
     modelList.listbox(RelativeSize{ 0.33, 0 },

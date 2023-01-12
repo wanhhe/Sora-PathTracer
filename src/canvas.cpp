@@ -540,6 +540,8 @@ void MyGLCanvas::drawGL() {
         shaderList[modelList[i]->shaderIndex].setUniform("view", view);
         shaderList[modelList[i]->shaderIndex].setUniform("projection", projection);
         shaderList[modelList[i]->shaderIndex].setUniform("viewPos", camera->position);
+        shaderList[modelList[i]->shaderIndex].setUniform("roughness", modelList[i]->roughenss);
+        shaderList[modelList[i]->shaderIndex].setUniform("metallic", modelList[i]->metallic);
         glEnable(GL_DEPTH_TEST);
         //modelList[i]->draw(mShader);
         modelList[i]->draw(shaderList[modelList[i]->shaderIndex]);
