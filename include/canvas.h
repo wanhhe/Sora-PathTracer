@@ -31,6 +31,7 @@ public:
     Model* firstModel();
     void preloadPbrMapBalls();
     void preloadKlaudiaValentz();
+    void preloadDiffuseIrradiance();
 
     vec3 translate;
     vec3 scale;
@@ -49,6 +50,9 @@ private:
     vector<Light*> lightList;
     int untitleModel;
     int untitleLight;
-    void renderSphere();
+    bool init;
+
     unsigned int loadTexture(char const* path);
+    void renderSphere();
+    void renderCube();
 };

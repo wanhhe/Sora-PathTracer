@@ -82,6 +82,7 @@ enum LightShapeEnum {
 enum PreLoadEnum {
     PRELOAD_NONE = 0,
     PBRMAPBALLS,
+    DIFFUSEIRRADIANCE,
     KLUDIAVALENTZ
 };
 

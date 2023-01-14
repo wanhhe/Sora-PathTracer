@@ -450,8 +450,104 @@ const string pbrMapFragShader =
 "   FragColor = vec4(color, 1.0);\n"
 "}\n";
 
+const string cubeMapVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"out vec3 WorldPos;\n"
+"uniform mat4 projection;\n"
+"uniform mat4 view;\n"
+"void main() {\n"
+"   WorldPos = aPos;\n"
+"   gl_Position = projection * view * vec4(WorldPos, 1.0);\n"
+"}\n";
+
+const string cubeMapFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec3 WorldPos;\n"
+"uniform sampler2D equirectangularMap;\n"
+"const vec2 invAtan = vec2(0.1591, 0.3183);\n"
+"vec2 sampleSphericalMap(vec3 v) {\n"
+"   vec2 uv = vec2(atan(v.z, v.x), asin(v.y));\n"
+"   uv *= invAtan;\n"
+"   uv += 0.5;\n"
+"   return uv;\n"
+"}\n"
+"void main() {\n"
+"   vec2 uv = sampleSphericalMap(normalize(WorldPos));\n"
+"   vec3 color = texture(equirectangularMap, uv).rgb;\n"
+"   FragColor = vec4(color, 1.0);\n"
+"}\n";
+
+const string backgroundVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"uniform mat4 projection;\n"
+"uniform mat4 view;\n"
+"out vec3 WorldPos;\n"
+"void main() {\n"
+"   WorldPos = aPos;\n"
+"   mat4 rotView = mat4(mat3(view));\n"
+"   vec4 clipPos = projection * rotView * vec4(WorldPos, 1.0);\n"
+"   gl_Position = clipPos.xyww;\n"
+"}\n";
+
+const string backgroundFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec3 WorldPos;\n"
+"uniform samplerCube environmentMap;\n"
+"void main() {\n"
+"   vec3 envColor = texture(environmentMap, WorldPos).rgb;\n"
+"   envColor = envColor / (envColor + vec3(1.0f));\n"
+"   envColor = pow(envColor, vec3(1.0/2.2));\n"
+"   FragColor = vec4(envColor, 1.0);\n"
+"}\n";
+
+const string hdrboxVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"uniform mat4 projection;\n"
+"uniform mat4 view;\n"
+"out vec3 WorldPos;\n"
+"void main() {\n"
+"   WorldPos = aPos;\n"
+"   gl_Position = projection * view * vec4(WorldPos, 1.0);\n"
+"}\n";
+
+const string hdrboxFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec3 WorldPos;\n"
+"uniform sampler2D testMap;\n"
+"const vec2 invAtan = vec2(0.1591, 0.3183);\n"
+"vec2 sampleSphericalMap(vec3 v) {\n"
+"   vec2 uv = vec2(atan(v.z, v.x), asin(v.y));\n"
+"   uv *= invAtan;\n"
+"   uv += 0.5;\n"
+"   return uv;\n"
+"}\n"
+"void main() {\n"
+"   vec2 uv = sampleSphericalMap(normalize(WorldPos));\n"
+"   vec3 color = texture(testMap, uv).rgb;\n"
+"   FragColor = vec4(color, 1.0);\n"
+"}\n";
+
+glm::vec3 lightPositions[] = {
+    glm::vec3(-10.0f,  10.0f, 10.0f),
+    glm::vec3(10.0f,  10.0f, 10.0f),
+    glm::vec3(-10.0f, -10.0f, 10.0f),
+    glm::vec3(10.0f, -10.0f, 10.0f),
+};
+glm::vec3 lightColors[] = {
+    glm::vec3(300.0f, 300.0f, 300.0f),
+    glm::vec3(300.0f, 300.0f, 300.0f),
+    glm::vec3(300.0f, 300.0f, 300.0f),
+    glm::vec3(300.0f, 300.0f, 300.0f)
+};
+
 MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) : 
-    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(PBRMAPBALLS) {
+    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(DIFFUSEIRRADIANCE), init(false) {
     using namespace nanogui;
 
     //modelList.emplace_back(new Model("..\\models\\sara\\sara.obj", "Model 1"));
@@ -496,18 +592,6 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     GLShader cooktorranceShader;
     cooktorranceShader.init("cook_torrance_pbr_shader", cookTorranceVertexShader, cookTorranceFragShader);
     cooktorranceShader.bind();
-    glm::vec3 lightPositions[] = {
-        glm::vec3(-10.0f,  10.0f, 10.0f),
-        glm::vec3(10.0f,  10.0f, 10.0f),
-        glm::vec3(-10.0f, -10.0f, 10.0f),
-        glm::vec3(10.0f, -10.0f, 10.0f),
-    };
-    glm::vec3 lightColors[] = {
-        glm::vec3(300.0f, 300.0f, 300.0f),
-        glm::vec3(300.0f, 300.0f, 300.0f),
-        glm::vec3(300.0f, 300.0f, 300.0f),
-        glm::vec3(300.0f, 300.0f, 300.0f)
-    };
     for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i)
     {
         cooktorranceShader.setUniform("lightPosition[" + std::to_string(i) + "]", lightPositions[i]);
@@ -515,16 +599,25 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     }
     cooktorranceShader.setUniform("roughness", 0.2);
     cooktorranceShader.setUniform("metallic", 0.8);
-    cooktorranceShader.setUniform("viewPos", camera->position);
     cooktorranceShader.setUniform("ao", 1.0f);
     cooktorranceShader.setUniform("albedo", vec3(0.5f, 0.0f, 0.0f));
     shaderList.emplace_back(cooktorranceShader);
 
     GLShader pbrMapShader;
     pbrMapShader.init("pbr_map_shader", pbrMapVertexShader, pbrMapFragShader);
-    pbrMapShader.bind();
-    pbrMapShader.setUniform("viewPos", camera->position);
     shaderList.emplace_back(pbrMapShader);
+
+    GLShader cubeMapShader;
+    cubeMapShader.init("ibl_cube_hdr_map_shader", cubeMapVertexShader, cubeMapFragShader);
+    shaderList.emplace_back(cubeMapShader);
+
+    GLShader backgroundShader;
+    backgroundShader.init("simple_skybox_shader", backgroundVertexShader, backgroundFragShader);
+    shaderList.emplace_back(backgroundShader);
+
+    GLShader testShader;
+    testShader.init("test_shader", hdrboxVertexShader, hdrboxFragShader);
+    shaderList.emplace_back(testShader);
 
     //lightShader.init(
     //    "light_shader",
@@ -666,7 +759,13 @@ void MyGLCanvas::drawGL() {
         //glDisable(GL_DEPTH_TEST);
     }
     else if (preload == PBRMAPBALLS) {
+        glEnable(GL_DEPTH_TEST);
         preloadPbrMapBalls();
+    }
+    else if (preload == DIFFUSEIRRADIANCE) {
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LEQUAL);
+        preloadDiffuseIrradiance();
     }
     else if (preload == KLUDIAVALENTZ) {
         preloadKlaudiaValentz();
@@ -750,12 +849,13 @@ Model* MyGLCanvas::firstModel() {
     return modelList[0];
 }
 
-unsigned int sphereVAO = 0;
-unsigned int indexCount;
+int nrRows = 7;
+int nrColumns = 7;
+float spacing = 2.5;
+
 void MyGLCanvas::preloadPbrMapBalls() {
     shaderList[5].bind();
-    if (sphereVAO == 0)
-    {
+    if (!init) {
         shaderList[5].setUniform("albedoMap", 1);
         shaderList[5].setUniform("normalMap", 2);
         shaderList[5].setUniform("metallicMap", 3);
@@ -766,7 +866,6 @@ void MyGLCanvas::preloadPbrMapBalls() {
         unsigned int metallic = loadTexture("..\\models\\rustediron1-alt2-bl\\rustediron2_metallic.png");
         unsigned int roughness = loadTexture("..\\models\\rustediron1-alt2-bl\\rustediron2_roughness.png");
         unsigned int ao = loadTexture("..\\models\\rustediron1-alt2-bl\\rustediron2_ambient.png");
-        std::cout << albedo << " " << normal << " " << metallic << " " << roughness << " " << ao << std::endl;
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, albedo);
         glActiveTexture(GL_TEXTURE2);
@@ -777,16 +876,238 @@ void MyGLCanvas::preloadPbrMapBalls() {
         glBindTexture(GL_TEXTURE_2D, roughness);
         glActiveTexture(GL_TEXTURE5);
         glBindTexture(GL_TEXTURE_2D, ao);
+        init = true;
+    }
+    updateCamera();
+    view = lookAt(camera->position, camera->target, camera->up);
+    projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
+    shaderList[5].setUniform("view", view);
+    shaderList[5].setUniform("projection", projection);
+    shaderList[5].setUniform("viewPos", camera->position);
 
+    for (unsigned int i = 0; i < 4; ++i)
+    {
+        glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
+        shaderList[5].setUniform("lightPosition[" + std::to_string(i) + "]", newPos);
+        shaderList[5].setUniform("lightColors[" + std::to_string(i) + "]", lightColors[i]);
+    }
+
+    glm::mat4 model = glm::mat4(1.0f);
+    for (int row = 0; row < nrRows; ++row)
+    {
+        for (int col = 0; col < nrColumns; ++col)
+        {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(
+                (float)(col - (nrColumns / 2)) * spacing,
+                (float)(row - (nrRows / 2)) * spacing,
+                0.0f
+            ));
+            shaderList[5].setUniform("model", model);
+            renderSphere();
+        }
+    }
+}
+
+unsigned int envCubeMap;
+void MyGLCanvas::preloadDiffuseIrradiance() {
+    if (!init) {
+        shaderList[7].bind();
+        shaderList[7].setUniform("environmentMap", 0);
+
+        // pbr: setup framebuffer
+        // ----------------------
+        unsigned int captureFBO;
+        unsigned int captureRBO;
+        glGenFramebuffers(1, &captureFBO);
+        glGenRenderbuffers(1, &captureRBO);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+        glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
+
+        // pbr: load the HDR environment map
+        // ---------------------------------
+        stbi_set_flip_vertically_on_load(true);
+        int width, height, nrComponents;
+        float* data = stbi_loadf("..\\models\\HDR\\Newport_Loft\\Newport_Loft_Ref.hdr", &width, &height, &nrComponents, 0);
+        unsigned int hdrTexture;
+        if (data)
+        {
+            glGenTextures(1, &hdrTexture);
+            glBindTexture(GL_TEXTURE_2D, hdrTexture);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data); // note how we specify the texture's data value to be float
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+            stbi_image_free(data);
+        }
+        else
+        {
+            std::cout << "Failed to load HDR image." << std::endl;
+        }
+
+        // pbr: setup cubemap to render to and attach to framebuffer
+        // ---------------------------------------------------------
+        glGenTextures(1, &envCubeMap);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, envCubeMap);
+        for (unsigned int i = 0; i < 6; ++i)
+        {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 512, 512, 0, GL_RGB, GL_FLOAT, nullptr);
+        }
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        // pbr: set up projection and view matrices for capturing data onto the 6 cubemap face directions
+        // ----------------------------------------------------------------------------------------------
+        glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+        glm::mat4 captureViews[] =
+        {
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+        };
+
+        // pbr: convert HDR equirectangular environment map to cubemap equivalent
+        // ----------------------------------------------------------------------
+        shaderList[6].bind();
+        shaderList[6].setUniform("equirectangularMap", 0);
+        shaderList[6].setUniform("projection", captureProjection);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, hdrTexture);
+        
+        glViewport(0, 0, 512, 512); // don't forget to configure the viewport to the capture dimensions.
+        glScissor(0, 0, 512, 512);
+        glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+        for (unsigned int i = 0; i < 6; ++i)
+        {
+            shaderList[6].setUniform("view", captureViews[i]);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, envCubeMap, 0);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            renderCube();
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        // then before rendering, configure the viewport to the original framebuffer's screen dimensions
+        GLint storedViewport[4];
+        glGetIntegerv(GL_VIEWPORT, storedViewport);
+        glViewport(storedViewport[0], storedViewport[1], storedViewport[2], storedViewport[3]);
+        glScissor(storedViewport[0], storedViewport[1], storedViewport[2], storedViewport[3]);
+        init = true;
+    }
+    updateCamera();
+    view = lookAt(camera->position, camera->target, camera->up);
+    projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
+
+    //shaderList[8].bind();
+    //shaderList[8].setUniform("testMap", 0);
+    //shaderList[8].setUniform("projection", projection);
+    //shaderList[8].setUniform("view", view);
+    //stbi_set_flip_vertically_on_load(true);
+    //int width, height, nrComponents;
+    //float* data = stbi_loadf("..\\models\\HDR\\Newport_Loft\\Newport_Loft_Ref.hdr", &width, &height, &nrComponents, 0);
+    //unsigned int hdrTexture;
+    //if (data)
+    //{
+    //    glGenTextures(1, &hdrTexture);
+    //    glBindTexture(GL_TEXTURE_2D, hdrTexture);
+    //    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data);
+
+    //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    //    stbi_image_free(data);
+    //}
+    //else
+    //{
+    //    std::cout << "Failed to load HDR image." << std::endl;
+    //}
+    //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    //renderCube();
+
+    shaderList[4].bind();
+    shaderList[4].setUniform("view", view);
+    shaderList[4].setUniform("projection", projection);
+    shaderList[4].setUniform("viewPos", camera->position);
+
+    for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i)
+    {
+        glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
+        shaderList[4].setUniform("lightPosition[" + std::to_string(i) + "]", newPos);
+        shaderList[4].setUniform("lightColors[" + std::to_string(i) + "]", lightColors[i]);
+    }
+
+    // render rows*column number of spheres with varying metallic/roughness values scaled by rows and columns respectively
+    glm::mat4 model = glm::mat4(1.0f);
+    for (int row = 0; row < nrRows; ++row)
+    {
+        shaderList[4].setUniform("metallic", (float)row / (float)nrRows);
+        for (int col = 0; col < nrColumns; ++col)
+        {
+            // we clamp the roughness to 0.025 - 1.0 as perfectly smooth surfaces (roughness of 0.0) tend to look a bit off
+            // on direct lighting.
+            shaderList[4].setUniform("roughness", glm::clamp((float)col / (float)nrColumns, 0.05f, 1.0f));
+
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(
+                (float)(col - (nrColumns / 2)) * spacing,
+                (float)(row - (nrRows / 2)) * spacing,
+                -2.0f
+            ));
+            shaderList[4].setUniform("model", model);
+            renderSphere();
+        }
+    }
+
+    // render skybox (render as last to prevent overdraw)
+    shaderList[7].bind();
+    shaderList[7].setUniform("view", view);
+    shaderList[7].setUniform("projection", projection);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubeMap);
+    renderCube();
+}
+
+unsigned int klaudiaVAO = 0;
+void MyGLCanvas::preloadKlaudiaValentz() {
+    string id = addModel("..\\models\\KlaudiaValentz\\KlaudiaValentz.obj", "Klaudia");
+    Model* model = modelList[0];
+    model->shaderIndex = 4;
+    model->translate = vec3(0.0);
+    loadTexture("..\\models\\KlaudiaValentz\\RaycastEffects\\Boyd\\");
+}
+
+unsigned int sphereVAO = 0;
+unsigned int indexCount;
+void MyGLCanvas::renderSphere() {
+    if (sphereVAO == 0)
+    {
         glGenVertexArrays(1, &sphereVAO);
 
         unsigned int vbo, ebo;
         glGenBuffers(1, &vbo);
         glGenBuffers(1, &ebo);
 
-        std::vector<vec3> positions;
-        std::vector<vec2> uv;
-        std::vector<vec3> normals;
+        std::vector<glm::vec3> positions;
+        std::vector<glm::vec2> uv;
+        std::vector<glm::vec3> normals;
         std::vector<unsigned int> indices;
 
         const unsigned int X_SEGMENTS = 64;
@@ -861,63 +1182,83 @@ void MyGLCanvas::preloadPbrMapBalls() {
         glEnableVertexAttribArray(2);
         glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
     }
-    updateCamera();
-    view = lookAt(camera->position, camera->target, camera->up);
-    projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
-    shaderList[5].setUniform("view", view);
-    shaderList[5].setUniform("projection", projection);
-    shaderList[5].setUniform("viewPos", camera->position);
 
-    int nrRows = 7;
-    int nrColumns = 7;
-    float spacing = 2.5;
-    glm::mat4 model = glm::mat4(1.0f);
-    glm::vec3 lightPositions[] = {
-        glm::vec3(-10.0f,  10.0f, 10.0f),
-        glm::vec3(10.0f,  10.0f, 10.0f),
-        glm::vec3(-10.0f, -10.0f, 10.0f),
-        glm::vec3(10.0f, -10.0f, 10.0f),
-    };
-    glm::vec3 lightColors[] = {
-        glm::vec3(150, 150.0f, 150.0f),
-        glm::vec3(150, 150.0f, 150.0f),
-        glm::vec3(150, 150.0f, 150.0f),
-        glm::vec3(150, 150.0f, 150.0f)
-    };
-
-    for (unsigned int i = 0; i < 4; ++i)
-    {
-        glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
-        shaderList[5].setUniform("lightPosition[" + std::to_string(i) + "]", newPos);
-        shaderList[5].setUniform("lightColors[" + std::to_string(i) + "]", lightColors[i]);
-    }
-
-    for (int row = 0; row < nrRows; ++row)
-    {
-        for (int col = 0; col < nrColumns; ++col)
-        {
-            model = glm::mat4(1.0f);
-            model = glm::translate(model, glm::vec3(
-                (float)(col - (nrColumns / 2)) * spacing,
-                (float)(row - (nrRows / 2)) * spacing,
-                0.0f
-            ));
-            shaderList[5].setUniform("model", model);
-            glBindVertexArray(sphereVAO);
-            glEnable(GL_DEPTH_TEST);
-            glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
-            glDisable(GL_DEPTH_TEST);
-        }
-    }
+    glBindVertexArray(sphereVAO);
+    glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
 }
 
-unsigned int klaudiaVAO = 0;
-void MyGLCanvas::preloadKlaudiaValentz() {
-    string id = addModel("..\\models\\KlaudiaValentz\\KlaudiaValentz.obj", "Klaudia");
-    Model* model = modelList[0];
-    model->shaderIndex = 4;
-    model->translate = vec3(0.0);
-    loadTexture("..\\models\\KlaudiaValentz\\RaycastEffects\\Boyd\\");
+unsigned int cubeVAO = 0;
+unsigned int cubeVBO = 0;
+void MyGLCanvas::renderCube()
+{
+    // initialize (if necessary)
+    if (cubeVAO == 0)
+    {
+        float vertices[] = {
+            // back face
+            -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+             1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
+             1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f, // bottom-right         
+             1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
+            -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+            -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f, // top-left
+            // front face
+            -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
+             1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f, // bottom-right
+             1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
+             1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
+            -1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f, // top-left
+            -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
+            // left face
+            -1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
+            -1.0f,  1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-left
+            -1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
+            -1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
+            -1.0f, -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-right
+            -1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
+            // right face
+             1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+             1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+             1.0f,  1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-right         
+             1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+             1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+             1.0f, -1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-left     
+            // bottom face
+            -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
+             1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f, // top-left
+             1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
+             1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
+            -1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f, // bottom-right
+            -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
+            // top face
+            -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
+             1.0f,  1.0f , 1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
+             1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f, // top-right     
+             1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
+            -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
+            -1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f  // bottom-left        
+        };
+
+        glGenVertexArrays(1, &cubeVAO);
+        glGenBuffers(1, &cubeVBO);
+        // fill buffer
+        glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+        // link vertex attributes
+        glBindVertexArray(cubeVAO);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+    }
+    // render Cube
+    glBindVertexArray(cubeVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
 }
 
 unsigned int MyGLCanvas::loadTexture(char const* path)
