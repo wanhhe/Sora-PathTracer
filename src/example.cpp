@@ -405,13 +405,14 @@ ExampleApplication::ExampleApplication() : nanogui::Screen(nanogui::Vector2i(140
 
     Window* renderWindow = new Window(this, "Render Result");
     renderWindow->setPosition(Vector2i(FORM_WIDTH + 2 * MARGIN, 3 * MARGIN));
-    renderWindow->setLayout(new GroupLayout());
-    renderWindow->setFixedWidth(600);
-    renderWindow->setFixedHeight(600);
+    //renderWindow->setLayout(new GroupLayout());
+    renderWindow->setFixedWidth(580);
+    renderWindow->setFixedHeight(580);
 
     mCanvas = new MyGLCanvas(renderWindow, camera);
     mCanvas->setBackgroundColor({ 100, 100, 100, 255 });
     mCanvas->setSize({ SCREEN_WIDTH, SCREEN_HEIGHT });
+    mCanvas->setPosition(Vector2i(2 * MARGIN, 3 * MARGIN));
 
     auto& modelList = this->window(Caption{ "Model Settings" },
         WidgetStretchLayout{ Orientation::Horizontal },
@@ -449,8 +450,6 @@ ExampleApplication::ExampleApplication() : nanogui::Screen(nanogui::Vector2i(140
             return;
         selectedModel->translate.x = x;
         });
-
-    std::cout << dot(vec3(2.f), vec3(2.f)) << std::endl;
 
     auto& translateY = modelLocationWrapper.widget();
     translateY.flexlayout(Orientation::Horizontal);
