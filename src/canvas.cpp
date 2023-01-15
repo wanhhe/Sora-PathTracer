@@ -533,6 +533,109 @@ const string hdrboxFragShader =
 "   FragColor = vec4(color, 1.0);\n"
 "}\n";
 
+const string irradianceConvolutionFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec3 WorldPos;\n"
+"uniform samplerCube environmentMap;\n"
+"const float PI = 3.14159265359;\n"
+"void main() {\n"
+"   vec3 normal = normalize(WorldPos);\n"
+"   vec3 irradiance = vec3(0.0f);\n"
+"   vec3 up = vec3(0,1,0);\n"
+"   vec3 right = normalize(cross(up, normal));\n"
+"   up = normalize(cross(right, normal));\n"
+"   float sampleDelta = 0.025;\n"
+"   float nrSamples = 0.0;\n"
+"   for (float phi = 0.0; phi < 2.0 * PI; phi += sampleDelta) {\n"
+"       for (float theta = 0.0; theta < 0.5 * PI; theta += sampleDelta) {\n"
+"           vec3 tangentSample = vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));\n"
+"           vec3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * normal;\n"
+"           irradiance += texture(environmentMap, sampleVec).rgb * cos(theta) * sin(theta);\n"
+"           nrSamples++;\n"
+"       }\n"
+"   }\n"
+"   irradiance = PI * irradiance * (1.0 / nrSamples);\n"
+"   FragColor = vec4(irradiance, 1.0);\n"
+"}\n";
+
+const string iblDiffusePbrFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec3 WorldPos;\n"
+"in vec3 Normal;\n"
+"in vec2 TexCoords;\n"
+"uniform vec3 albedo;\n"
+"uniform float roughness;\n"
+"uniform float metallic;\n"
+"uniform float ao;\n"
+"uniform samplerCube irradianceMap;\n"
+"uniform vec3 lightPosition[4];\n"
+"uniform vec3 lightColors[4];\n"
+"uniform vec3 viewPos;\n"
+"const float PI = 3.15159265359;\n"
+"vec3 fresnelSchlick(float cosTheta, vec3 F0) {\n"
+"   return F0 +(1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);\n"
+"}\n"
+"float DistributionGGX(vec3 N, vec3 H, float roughness) {\n"
+"   float alpha = roughness * roughness;\n"
+"   float alpha2 = alpha * alpha;\n"
+"   float NdotH = max(dot(N, H), 0.0);\n"
+"   float NdotH2 = NdotH * NdotH;\n"
+"   float nom = alpha2;\n"
+"   float denom = (NdotH2 * (alpha2 - 1.0) + 1.0);\n"
+"   denom = PI * denom * denom;\n"
+"   return nom / denom;\n"
+"}\n"
+"float GeometrySchlickGGX(float NdotV, float roughness) {\n"
+"   float r = roughness + 1.0;\n"
+"   float k = (r * r) /8.0;\n"
+"   float nom = NdotV;\n"
+"   float denom = NdotV * (1.0 - k) + k;\n"
+"   return nom / denom;\n"
+"}\n"
+"float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {\n"
+"   float NdotV = max(dot(N, V), 0.0);\n"
+"   float NdotL = max(dot(N, L), 0.0);\n"
+"   float ggx2 = GeometrySchlickGGX(NdotV, roughness);\n"
+"   float ggx1 = GeometrySchlickGGX(NdotL, roughness);\n"
+"   return ggx2 * ggx1;\n"
+"}\n"
+"void main() {\n"
+"   vec3 N = normalize(Normal);\n"
+"   vec3 V = normalize(viewPos - WorldPos);\n"
+"   vec3 F0 = vec3(0.04);\n"
+"   F0 = mix(F0, albedo, metallic);\n"
+"   vec3 Lo = vec3(0.0f);\n"
+"   for (int i = 0; i < 4; i++) {\n"
+"       vec3 L = normalize(lightPosition[i] - WorldPos);\n"
+"       vec3 H = normalize(V + L);\n"
+"       float distance = length(lightPosition[i] - WorldPos);\n"
+"       float attenuation = 1.0 / (distance * distance);\n"
+"       vec3 radiance = lightColors[i] * attenuation;\n"
+"       float NDF = DistributionGGX(N, H, roughness);\n"
+"       float G = GeometrySmith(N, V, L, roughness);\n"
+"       vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);\n"
+"       vec3 numerator = NDF * G * F;\n"
+"       float NdotL = max(dot(N, L), 0.0);\n"
+"       float denominator = 4.0 * max(dot(N, V), 0.0) * NdotL + 0.0001;\n"
+"       vec3 specular = numerator / denominator;\n"
+"       vec3 Ks = F;\n"
+"       vec3 Kd = vec3(1.0) - Ks;\n"
+"       Lo += (Kd * albedo / PI + specular) * radiance * NdotL;\n"
+"   }\n"
+"   vec3 Ks = fresnelSchlick(max(dot(N, V), 0.0), F0);\n"
+"   vec3 Kd = vec3(1.0) - Ks;\n"
+"   Kd *= (1.0 - metallic);\n"
+"   vec3 irradiance = texture(irradianceMap, N).rgb;\n"
+"   vec3 diffuse = irradiance * albedo;\n"
+"   vec3 ambient = Kd * diffuse * ao;\n"
+"   vec3 color = ambient + Lo;\n"
+"   color = color / (color + vec3(1.0f));\n"
+"   color = pow(color, vec3(1.0 / 2.2));\n"
+"   FragColor = vec4(color, 1.0);\n"
+"}\n";
+
 glm::vec3 lightPositions[] = {
     glm::vec3(-10.0f,  10.0f, 10.0f),
     glm::vec3(10.0f,  10.0f, 10.0f),
@@ -615,9 +718,20 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     backgroundShader.init("simple_skybox_shader", backgroundVertexShader, backgroundFragShader);
     shaderList.emplace_back(backgroundShader);
 
-    GLShader testShader;
-    testShader.init("test_shader", hdrboxVertexShader, hdrboxFragShader);
-    shaderList.emplace_back(testShader);
+    GLShader hdrboxShader;
+    hdrboxShader.init("test_shader", hdrboxVertexShader, hdrboxFragShader);
+    shaderList.emplace_back(hdrboxShader);
+
+    GLShader irradianceConvolutionShader;
+    irradianceConvolutionShader.init("irradiance_convolution_shader", cubeMapVertexShader, irradianceConvolutionFragShader);
+    shaderList.emplace_back(irradianceConvolutionShader);
+
+    GLShader diffusePbrShader;
+    diffusePbrShader.init("diffuse_ibl_shader", cookTorranceVertexShader, iblDiffusePbrFragShader);
+    diffusePbrShader.bind();
+    diffusePbrShader.setUniform("ao", 1.0f);
+    diffusePbrShader.setUniform("albedo", vec3(0.5f, 0.0f, 0.0f));
+    shaderList.emplace_back(diffusePbrShader);
 
     //lightShader.init(
     //    "light_shader",
@@ -910,6 +1024,7 @@ void MyGLCanvas::preloadPbrMapBalls() {
 }
 
 unsigned int envCubeMap;
+unsigned int irradianceMap;
 void MyGLCanvas::preloadDiffuseIrradiance() {
     if (!init) {
         shaderList[7].bind();
@@ -999,6 +1114,36 @@ void MyGLCanvas::preloadDiffuseIrradiance() {
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+        // convolute irradiance
+        glGenTextures(1, &irradianceMap);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
+        for (unsigned int i = 0; i < 6; i++) {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 32, 32, 0, GL_RGB, GL_FLOAT, nullptr);
+        }
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+        glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 32, 32);
+        shaderList[9].bind();
+        shaderList[9].setUniform("environmentMap", 0);
+        shaderList[9].setUniform("projection", captureProjection);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, envCubeMap);
+        glViewport(0, 0, 32, 32);
+        glScissor(0, 0, 32, 32);
+        glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+        for (unsigned int i = 0; i < 6; i++) {
+            shaderList[9].setUniform("view", captureViews[i]);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, irradianceMap, 0);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            renderCube();
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
         // then before rendering, configure the viewport to the original framebuffer's screen dimensions
         GLint storedViewport[4];
         glGetIntegerv(GL_VIEWPORT, storedViewport);
@@ -1042,36 +1187,66 @@ void MyGLCanvas::preloadDiffuseIrradiance() {
     //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     //renderCube();
 
-    shaderList[4].bind();
-    shaderList[4].setUniform("view", view);
-    shaderList[4].setUniform("projection", projection);
-    shaderList[4].setUniform("viewPos", camera->position);
+    //shaderList[4].bind();
+    //shaderList[4].setUniform("view", view);
+    //shaderList[4].setUniform("projection", projection);
+    //shaderList[4].setUniform("viewPos", camera->position);
+    //for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i)
+    //{
+    //    glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
+    //    shaderList[4].setUniform("lightPosition[" + std::to_string(i) + "]", newPos);
+    //    shaderList[4].setUniform("lightColors[" + std::to_string(i) + "]", lightColors[i]);
+    //}
+    //// render rows*column number of spheres with varying metallic/roughness values scaled by rows and columns respectively
+    //glm::mat4 model = glm::mat4(1.0f);
+    //for (int row = 0; row < nrRows; ++row)
+    //{
+    //    shaderList[4].setUniform("metallic", (float)row / (float)nrRows);
+    //    for (int col = 0; col < nrColumns; ++col)
+    //    {
+    //        // we clamp the roughness to 0.025 - 1.0 as perfectly smooth surfaces (roughness of 0.0) tend to look a bit off
+    //        // on direct lighting.
+    //        shaderList[4].setUniform("roughness", glm::clamp((float)col / (float)nrColumns, 0.05f, 1.0f));
+    //        model = glm::mat4(1.0f);
+    //        model = glm::translate(model, glm::vec3(
+    //            (float)(col - (nrColumns / 2)) * spacing,
+    //            (float)(row - (nrRows / 2)) * spacing,
+    //            -2.0f
+    //        ));
+    //        shaderList[4].setUniform("model", model);
+    //        renderSphere();
+    //    }
+    //}
 
+    shaderList[10].bind();
+    shaderList[10].setUniform("view", view);
+    shaderList[10].setUniform("projection", projection);
+    shaderList[10].setUniform("viewPos", camera->position);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
     for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i)
     {
         glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
-        shaderList[4].setUniform("lightPosition[" + std::to_string(i) + "]", newPos);
-        shaderList[4].setUniform("lightColors[" + std::to_string(i) + "]", lightColors[i]);
+        shaderList[10].setUniform("lightPosition[" + std::to_string(i) + "]", newPos);
+        shaderList[10].setUniform("lightColors[" + std::to_string(i) + "]", lightColors[i]);
     }
-
     // render rows*column number of spheres with varying metallic/roughness values scaled by rows and columns respectively
     glm::mat4 model = glm::mat4(1.0f);
     for (int row = 0; row < nrRows; ++row)
     {
-        shaderList[4].setUniform("metallic", (float)row / (float)nrRows);
+        shaderList[10].setUniform("metallic", (float)row / (float)nrRows);
         for (int col = 0; col < nrColumns; ++col)
         {
             // we clamp the roughness to 0.025 - 1.0 as perfectly smooth surfaces (roughness of 0.0) tend to look a bit off
             // on direct lighting.
-            shaderList[4].setUniform("roughness", glm::clamp((float)col / (float)nrColumns, 0.05f, 1.0f));
-
+            shaderList[10].setUniform("roughness", glm::clamp((float)col / (float)nrColumns, 0.05f, 1.0f));
             model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(
                 (float)(col - (nrColumns / 2)) * spacing,
                 (float)(row - (nrRows / 2)) * spacing,
                 -2.0f
             ));
-            shaderList[4].setUniform("model", model);
+            shaderList[10].setUniform("model", model);
             renderSphere();
         }
     }
