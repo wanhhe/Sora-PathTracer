@@ -817,22 +817,8 @@ void MyGLCanvas::drawGL() {
     if (preload == PRELOAD_NONE) {
         if (modelList.size() == 0) return;
         updateCamera();
-        //std::cout << camera->position.x << " " << camera->position.y << " " << camera->position.z << std::endl;
-        //std::cout << camera->target.x << " " << camera->target.y << " " << camera->target.z << std::endl;
-        //std::cout << std::endl;
         view = lookAt(camera->position, camera->target, camera->up);
         projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
-        //view = lookAt(vec3(0.0f, 0.0f, 3.f), vec3(0.f, 0.f, 2.f), vec3(0, 1.f, 0));
-        //projection = glm::perspective(radians(camera->fov), 1.0f, 0.1f, 100.0f);
-        //projection = glm::perspective(radians(45.f), 1.0f, 0.1f, 100.0f);
-
-        //model = glm::translate(model, translate);
-        //model = glm::scale(model, scale);
-        //mvp = projection * view * model;
-
-        //mShader.setUniform("model", model);
-        //mShader.setUniform("view", view);
-        //mShader.setUniform("projection", projection);
         for (int i = 0; i < modelList.size(); i++) {
             model[0][0] = 1.0f;
             model[0][1] = 0.0f;
@@ -860,7 +846,6 @@ void MyGLCanvas::drawGL() {
             shaderList[modelList[i]->shaderIndex].setUniform("roughness", modelList[i]->roughenss);
             shaderList[modelList[i]->shaderIndex].setUniform("metallic", modelList[i]->metallic);
             glEnable(GL_DEPTH_TEST);
-            //modelList[i]->draw(mShader);
             modelList[i]->draw(shaderList[modelList[i]->shaderIndex]);
             glDisable(GL_DEPTH_TEST);
         }
@@ -1475,9 +1460,6 @@ unsigned int MyGLCanvas::loadTexture(char const* path)
 
 bool MyGLCanvas::scrollEvent(const nanogui::Vector2i& p, const nanogui::Vector2f& rel) {
     // p是鼠标位置，rel是鼠标的滚动，(0,1)是前滚，(0,-1)是后滚
-    //std::cout << "scroll" << std::endl;
-    //std::cout << p.x() << " " << p.y() << std::endl;
-    //std::cout << rel.x() << " " << rel.y() << std::endl;
     //if (rel.y() == 1) {
     //    camera->cameraPos += camera->scaleSpeed * camera->cameraFront;
     //    return true;
@@ -1638,7 +1620,6 @@ bool MyGLCanvas::mouseButtonEvent(const nanogui::Vector2i& p, int button, bool d
             camera->isOrbiting = false;
             camera->orbitDelta += posDelta;
         }
-        //std::cout << camera->orbitPos.x << " " << camera->orbitPos.y << std::endl;
         return true;
     }
     else if (button == GLFW_MOUSE_BUTTON_2) {
@@ -1657,17 +1638,6 @@ bool MyGLCanvas::mouseButtonEvent(const nanogui::Vector2i& p, int button, bool d
 }
 
 bool MyGLCanvas::mouseDragEvent(const nanogui::Vector2i& p, const nanogui::Vector2i& rel, int button, int modifiers) {
-    //vec2 cursorPos = vec2(p.x(), p.y());
-    //camera->cursor = cursorPos;
-    //if (button == 1) {
-    //    //camera->orbitPos = cursorPos;
-    //    //std::cout << camera->orbitPos.x << " " << camera->orbitPos.y << std::endl;
-    //    return true;
-    //}
-    //else if (button == 2) {
-    //    //camera->panPos = cursorPos;
-    //    return true;
-    //}
     camera->cursor.x = p.x();
     camera->cursor.y = p.y();
     return true;
@@ -1684,7 +1654,6 @@ vec2 MyGLCanvas::getPosDelta(vec2 old_pos, vec2 new_pos) {
 
 void MyGLCanvas::updateCamera() {
     vec2 cursorPos = camera->cursor;
-    //std::cout << cursorPos.x << " " << cursorPos.y << std::endl;
     if (camera->isOrbiting) {
         vec2 posDelta = getPosDelta(camera->orbitPos, cursorPos);
         camera->orbitDelta += posDelta;
@@ -1692,31 +1661,12 @@ void MyGLCanvas::updateCamera() {
     }
     if (camera->isPanning) {
         vec2 posDelta = getPosDelta(camera->panPos, cursorPos);
-        /*std::cout << posDelta.x << " " << posDelta.y << std::endl;*/
         camera->panDelta += posDelta;
-        //std::cout << camera->panDelta.x << " " << camera->panDelta.y << std::endl;
         camera->panPos = cursorPos;
     }
     camera->orbit = camera->orbitDelta;
     camera->pan = camera->panDelta;
-    //std::cout << camera->pan.x << " " << camera->pan.y << std::endl;
     camera->dolly = camera->dollyDelta;
-    //std::cout << camera->dollyDelta << std::endl;
-    //if (count1 == 1) {
-    //    std::cout << camera->pan.x << " " << camera->pan.y  << std::endl;
-    //    std::cout << camera->orbit.x << " " << camera->orbit.y << std::endl;
-    //    std::cout << std::endl;
-    //    count1++;
-    //}
-    //if (count1 == 1) {
-    //    std::cout << camera->position.x << " ei " << camera->position.y << " " << camera->position.z << std::endl;
-    //    std::cout << camera->target.x << " " << camera->target.y << " " << camera->target.z << std::endl;
-    //    std::cout << std::endl;
-    //    count1++;
-    //}
-    //std::cout << camera->position.x << " " << camera->position.y << " " << camera->position.z << std::endl;
-    //std::cout << camera->target.x << " " << camera->target.y << " " << camera->target.z << std::endl;
-    //std::cout << std::endl;
     camera->updateTransform();
     
     camera->dollyDelta = 0;
@@ -1724,14 +1674,9 @@ void MyGLCanvas::updateCamera() {
     camera->orbitDelta.y = 0;
     camera->panDelta.x = 0;
     camera->panDelta.y = 0;
-
-    //std::cout << camera->position.x << " " << camera->position.y << " " << camera->position.z << std::endl;
-    //std::cout << camera->target.x << " " << camera->target.y << " " << camera->target.z << std::endl;
-    //std::cout << std::endl;
 }
 
 bool MyGLCanvas::keyboardEvent(int key, int scancode, int action, int modifiers) {
-    //std::cout << "debgu2" << std::endl;
     //if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
     //    setVisible(false);
     //    return false;

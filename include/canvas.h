@@ -40,7 +40,6 @@ public:
 private:
     vector<nanogui::GLShader> shaderList;
     vector<nanogui::GLShader> lightShaderList;
-    //nanogui::GLShader mShader;
     nanogui::GLShader lightShader;
     mat4 model;
     mat4 view;
