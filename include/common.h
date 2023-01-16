@@ -83,7 +83,8 @@ enum PreLoadEnum {
     PRELOAD_NONE = 0,
     PBRMAPBALLS,
     DIFFUSEIRRADIANCE,
-    KLUDIAVALENTZ
+    KLUDIAVALENTZ,
+    SHADOWMAPPING
 };
 
 typedef struct Config {

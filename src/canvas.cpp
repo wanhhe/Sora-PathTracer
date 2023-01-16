@@ -636,6 +636,100 @@ const string iblDiffusePbrFragShader =
 "   FragColor = vec4(color, 1.0);\n"
 "}\n";
 
+const string shadowMappingDepthVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"uniform mat4 lightSpaceMatrix;\n"
+"uniform mat4 model;\n"
+"void main() {\n"
+"   gl_Position = lightSpaceMatrix * model * vec4(aPos, 1.0);\n"
+"}\n";
+
+const string shadowMappingDepthFragShader =
+"#version 330 core\n"
+"void main() {}\n";
+
+const string shadowMappingVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"layout(location = 1) in vec3 aNormal;\n"
+"layout(location = 2) in vec2 aTexCoords;\n"
+"out vec2 TexCoords;\n"
+"out vec3 FragPos;\n"
+"out vec3 Normal;\n"
+"out vec4 lightFragPos;\n"
+"uniform mat4 projection;\n"
+"uniform mat4 view;\n"
+"uniform mat4 model;\n"
+"uniform mat4 lightSpaceMatrix;\n"
+"void main() {\n"
+"   FragPos = vec3(model * vec4(aPos, 1.0));\n"
+"   Normal = transpose(inverse(mat3(model))) * aNormal;\n"
+"   TexCoords = aTexCoords;\n"
+"   lightFragPos = lightSpaceMatrix * vec4(FragPos, 1.0);\n"
+"   gl_Position = projection * view * vec4(FragPos, 1.0);\n"
+"}\n";
+
+const string shadowMappingFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec2 TexCoords;\n"
+"in vec3 FragPos;\n"
+"in vec3 Normal;\n"
+"in vec4 lightFragPos;\n"
+"uniform sampler2D diffuseTexture;\n"
+"uniform sampler2D shadowMap;\n"
+"uniform vec3 viewPos;\n"
+"uniform vec3 lightPos;\n"
+"float shadowCalculation(vec4 fragPosLightSpace) {\n"
+"   vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;\n"
+"   projCoords = projCoords * 0.5 + 0.5;\n"
+"   if (projCoords.z > 1.f) return 0.f;"
+"   float closestDepth = texture(shadowMap, projCoords.xy).r;\n"
+"   float currentDepth = projCoords.z;\n"
+"   float bias = max(0.05 * (1 - dot(normalize(Normal), normalize(lightPos - FragPos))), 0.005);\n"
+"   return currentDepth - bias > closestDepth ? 1.0 : 0.0;\n"
+"}\n"
+"void main() {\n"
+"   vec3 color = texture(diffuseTexture, TexCoords).rgb;\n"
+"   vec3 normal = normalize(Normal);\n"
+"   vec3 lightColor = vec3(0.3);\n"
+"   vec3 ambient = 0.3 * lightColor;\n"
+"   vec3 lightDir = normalize(lightPos - FragPos);\n"
+"   float diff = max(dot(lightDir, normal), 0.0);\n"
+"   vec3 diffuse = lightColor * diff;\n"
+"   vec3 viewDir = normalize(viewPos - FragPos);\n"
+"   vec3 halfwayDir = normalize(viewDir + lightDir);\n"
+"   float spec = max(dot(halfwayDir, normal), 0);\n"
+"   vec3 specular = spec * lightColor;\n"
+"   float shadow = shadowCalculation(lightFragPos);\n"
+"   vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;\n"
+"   FragColor = vec4(lighting, 1);\n"
+"}\n";
+
+const string shadowDebugVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"layout(location = 1) in vec2 aTexCoords;\n"
+"out vec2 TexCoords;\n"
+"void main() {\n"
+"   TexCoords = aTexCoords;\n"
+"   gl_Position = vec4(aPos, 1.0);\n"
+"}\n";
+
+const string shadowDebugFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec2 TexCoords;\n"
+"uniform sampler2D depthMap;\n"
+"uniform float near_plane;\n"
+"uniform float far_plane;\n"
+"void main() {\n"
+"   float depthValue = texture(depthMap, TexCoords).r;\n"
+"   FragColor = vec4(vec3(depthValue), 1.0);\n"
+"}\n";
+
+
 glm::vec3 lightPositions[] = {
     glm::vec3(-10.0f,  10.0f, 10.0f),
     glm::vec3(10.0f,  10.0f, 10.0f),
@@ -650,7 +744,7 @@ glm::vec3 lightColors[] = {
 };
 
 MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) : 
-    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(DIFFUSEIRRADIANCE), init(false) {
+    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(SHADOWMAPPING), init(false) {
     using namespace nanogui;
 
     //modelList.emplace_back(new Model("..\\models\\sara\\sara.obj", "Model 1"));
@@ -732,6 +826,36 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     diffusePbrShader.setUniform("ao", 1.0f);
     diffusePbrShader.setUniform("albedo", vec3(0.5f, 0.0f, 0.0f));
     shaderList.emplace_back(diffusePbrShader);
+
+
+    mat4 lightProjection, lightView;
+    mat4 lightSpaceMatrix;
+    float near_plane = 1.0f, far_plane = 7.5f;
+    lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
+    lightView = glm::lookAt(vec3(-2.0f, 4.0f, -1.0f), glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+    lightSpaceMatrix = lightProjection * lightView;
+
+    GLShader shadowDepthShader;
+    shadowDepthShader.init("shadow_map_depth_shader", shadowMappingDepthVertexShader, shadowMappingDepthFragShader);
+    // render scene from light's point of view
+    shadowDepthShader.bind();
+    shadowDepthShader.setUniform("lightSpaceMatrix", lightSpaceMatrix);
+    shaderList.emplace_back(shadowDepthShader);
+
+    GLShader shadowShader;
+    shadowShader.init("shadow_map_shader", shadowMappingVertexShader, shadowMappingFragShader);
+    shadowShader.bind();
+    shadowShader.setUniform("lightPos", vec3(-2.0f, 4.0f, -1.0f));
+    shadowShader.setUniform("lightSpaceMatrix", lightSpaceMatrix);
+    shaderList.emplace_back(shadowShader);
+
+    GLShader debugShadowShader;
+    debugShadowShader.init("debug_shadow_shader", shadowDebugVertexShader, shadowDebugFragShader);
+    debugShadowShader.bind();
+    debugShadowShader.setUniform("near_plane", near_plane);
+    debugShadowShader.setUniform("far_plane", far_plane);
+    debugShadowShader.setUniform("depthMap", 0);
+    shaderList.emplace_back(debugShadowShader);
 
     //lightShader.init(
     //    "light_shader",
@@ -816,9 +940,11 @@ void MyGLCanvas::drawGL() {
     using namespace nanogui;
     if (preload == PRELOAD_NONE) {
         if (modelList.size() == 0) return;
+        glEnable(GL_DEPTH_TEST);
         updateCamera();
         view = lookAt(camera->position, camera->target, camera->up);
         projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
+
         for (int i = 0; i < modelList.size(); i++) {
             model[0][0] = 1.0f;
             model[0][1] = 0.0f;
@@ -845,9 +971,9 @@ void MyGLCanvas::drawGL() {
             shaderList[modelList[i]->shaderIndex].setUniform("viewPos", camera->position);
             shaderList[modelList[i]->shaderIndex].setUniform("roughness", modelList[i]->roughenss);
             shaderList[modelList[i]->shaderIndex].setUniform("metallic", modelList[i]->metallic);
-            glEnable(GL_DEPTH_TEST);
+            //glEnable(GL_DEPTH_TEST);
             modelList[i]->draw(shaderList[modelList[i]->shaderIndex]);
-            glDisable(GL_DEPTH_TEST);
+            //glDisable(GL_DEPTH_TEST);
         }
         //lightShader.bind();
         //lightShader.setUniform("lightMVP", projection * view);
@@ -868,6 +994,10 @@ void MyGLCanvas::drawGL() {
     }
     else if (preload == KLUDIAVALENTZ) {
         preloadKlaudiaValentz();
+    }
+    else if (preload == SHADOWMAPPING) {
+        glEnable(GL_DEPTH_TEST);
+        preloadShadowMapping();
     }
 }
 
@@ -946,6 +1076,147 @@ Light* MyGLCanvas::firstLight() {
 
 Model* MyGLCanvas::firstModel() {
     return modelList[0];
+}
+
+const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+unsigned int depthMapFBO;
+unsigned int depthMap;
+unsigned int woodTexture;
+unsigned int planeVAO;
+void MyGLCanvas::preloadShadowMapping() {
+    if (!init) {
+        // 加载地板
+        float planeVertices[] = {
+            // positions            // normals         // texcoords
+             25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
+            -25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+            -25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
+
+             25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
+            -25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
+             25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,  25.0f, 25.0f
+        };
+        // plane VAO
+        unsigned int planeVBO;
+        glGenVertexArrays(1, &planeVAO);
+        glGenBuffers(1, &planeVBO);
+        glBindVertexArray(planeVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+        glBindVertexArray(0);
+        // 加载纹理
+        woodTexture = loadTexture("..\\models\\rustediron1-alt2-bl\\rustediron2_basecolor.png");
+
+        glGenFramebuffers(1, &depthMapFBO);
+        glGenTextures(1, &depthMap);
+        glBindTexture(GL_TEXTURE_2D, depthMap);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+        // 让光锥之外不是阴影
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        GLfloat borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        // 将生成的深度纹理作为深度缓冲
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        shaderList[12].bind();
+        shaderList[12].setUniform("diffuseTexture", 0);
+        shaderList[12].setUniform("shadowMap", 1);
+        
+        init = true;
+    }
+    // 首先渲染深度纹理
+    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+    glScissor(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, woodTexture);
+    renderShadowScene(shaderList[11]);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // 重定义大小屏幕
+    glViewport(405, 115, 640, 640);
+    glScissor(405, 115, 640, 640);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    updateCamera();
+    view = lookAt(camera->position, camera->target, camera->up);
+    projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
+    shaderList[12].bind();
+    shaderList[12].setUniform("view", view);
+    shaderList[12].setUniform("projection", projection);
+    shaderList[12].setUniform("viewPos", camera->position);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, woodTexture);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    renderShadowScene(shaderList[12]);
+
+    //shaderList[13].bind();
+    //glActiveTexture(GL_TEXTURE0);
+    //glBindTexture(GL_TEXTURE_2D, depthMap);
+}
+
+void MyGLCanvas::renderShadowScene(nanogui::GLShader& shader) {
+    using namespace nanogui;
+    shader.bind();
+    // floor
+    glm::mat4 model = glm::mat4(1.0f);
+    shader.setUniform("model", model);
+    glBindVertexArray(planeVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    // cubes
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(0.0f, 1.5f, 0.0));
+    model = glm::scale(model, glm::vec3(0.5f));
+    shader.setUniform("model", model);
+    renderCube();
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(2.0f, 0.0f, 1.0));
+    model = glm::scale(model, glm::vec3(0.5f));
+    shader.setUniform("model", model);
+    renderCube();
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(-1.0f, 0.0f, 2.0));
+    model = glm::rotate(model, glm::radians(60.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
+    model = glm::scale(model, glm::vec3(0.25));
+    shader.setUniform("model", model);
+    renderCube();
+}
+
+void MyGLCanvas::generateShadowMap() {
+    if (!init) {   
+        glGenFramebuffers(1, &depthMapFBO);
+        glGenTextures(1, &depthMap);
+        glBindTexture(GL_TEXTURE_2D, depthMap);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        // 将生成的深度纹理作为深度缓冲
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        init = true;
+    }
 }
 
 int nrRows = 7;

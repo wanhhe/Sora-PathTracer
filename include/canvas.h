@@ -32,6 +32,9 @@ public:
     void preloadPbrMapBalls();
     void preloadKlaudiaValentz();
     void preloadDiffuseIrradiance();
+    void preloadShadowMapping();
+    void generateShadowMap();
+    void renderShadowScene(nanogui::GLShader& shader);
 
     vec3 translate;
     vec3 scale;
