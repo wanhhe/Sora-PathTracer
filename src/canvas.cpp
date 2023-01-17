@@ -687,7 +687,9 @@ const string shadowMappingFragShader =
 "   if (projCoords.z > 1.f) return 0.f;"
 "   float closestDepth = texture(shadowMap, projCoords.xy).r;\n"
 "   float currentDepth = projCoords.z;\n"
-"   float bias = max(0.05 * (1 - dot(normalize(Normal), normalize(lightPos - FragPos))), 0.005);\n"
+"   vec3 normal = normalize(Normal);\n"
+"   vec3 lightDir = normalize(lightPos - FragPos);\n"
+ "   float bias = max(0.05 * (1 - dot(normal, -lightDir)), 0.005);\n"
 //"   shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;"
 "   float shadow = 0.f;\n"
 "   vec2 texelSize = 1.0 / textureSize(shadowMap, 0);\n"
@@ -739,6 +741,118 @@ const string shadowDebugFragShader =
 "   FragColor = vec4(vec3(depthValue), 1.0);\n"
 "}\n";
 
+const string pcssVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"layout(location = 1) in vec3 aNormal;\n"
+"layout(location = 2) in vec2 aTexCoords;\n"
+"out vec3 FragPos;\n"
+"out vec3 Normal;\n"
+"out vec2 TexCoords;\n"
+"out vec4 lightFragPos;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"uniform mat4 lightSpaceMatrix;\n"
+"void main() {\n"
+"   FragPos = vec3(model * vec4(aPos, 1.0));\n"
+"   Normal = transpose(inverse(mat3(model))) * aNormal;\n"
+"   TexCoords = aTexCoords;\n"
+"   lightFragPos = lightSpaceMatrix * vec4(FragPos, 1.0);\n"
+"   gl_Position = projection * view * vec4(FragPos, 1.0);\n"
+"}\n";
+
+const string pcssFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec3 FragPos;\n"
+"in vec3 Normal;\n"
+"in vec2 TexCoords;\n"
+"in vec4 lightFragPos;\n"
+"uniform sampler2D diffuseTexture;\n"
+"uniform sampler2D shadowMap;\n"
+"uniform vec3 lightPos;\n"
+"uniform vec3 viewPos;\n"
+"#define NUM_SAMPLES 100\n"
+"#define PI2 6.283185307179586\n"
+"#define PI 3.141592653589793\n"
+"#define NUM_RINGS 10\n"
+"vec2 poissonDisk[NUM_SAMPLES];\n"
+"highp float rand_2to1(vec2 uv) {\n"
+"   const highp float a = 12.9898, b = 78.233, c = 43758.5453;\n"
+"   highp float dt = dot(uv.xy, vec2(a, b));\n"
+"   highp float sn = mod( dt, PI );\n"
+"   return fract(sin(sn) * c);\n"
+"}\n"
+"void poissonDiskSamples(const in vec2 randomSeed) {\n"
+"   float ANGLE_STEP = PI2 * float(NUM_RINGS)/float( NUM_SAMPLES);\n"
+"   float INV_NUM_SAMPLES = 1.0 / float(NUM_SAMPLES);\n"
+"   float angle = rand_2to1(randomSeed) * PI2;\n"
+"   float radius = INV_NUM_SAMPLES;\n"
+"   float radiusStep = radius;\n"
+"   for (int i = 0; i < NUM_SAMPLES; i++) {\n"
+"       poissonDisk[i] = vec2(cos(angle), sin(angle)) * pow( radius, 0.75 );\n"
+"       radius += radiusStep;\n"
+"       angle += ANGLE_STEP;\n"
+"   }\n"
+"}\n"
+"float pcf(vec3 projCoords, int r) {\n"
+"   if (projCoords.z > 1) return 0.f;\n"
+"   float cloestDepth = texture(shadowMap, projCoords.xy).r;\n"
+"   float currentDepth = projCoords.z;\n"
+"   float bias = max(0.008 * (1 - dot(normalize(Normal), normalize(FragPos - lightPos))), 0.004);\n"
+"   vec2 texelSize = 1.0 / textureSize(shadowMap, 0);\n"
+"   float shadow = 0.0;\n"
+"   poissonDiskSamples(projCoords.xy);\n"
+"   for (int i = 0; i < NUM_SAMPLES; i++) {\n"
+"       float pcfDepth = texture(shadowMap, projCoords.xy + r * poissonDisk[i] * texelSize).r;\n"
+"       shadow += currentDepth - bias > pcfDepth ? 1.f : 0.f;\n"
+"   }\n"
+"   shadow /= float(NUM_SAMPLES);\n"
+"   return shadow;\n"
+"}\n"
+"float averageBlockerDepth(vec3 projCoords, vec2 texelSize) {\n"
+"   float blockerZ = 0.0;\n"
+"   int count = 0;\n"
+"   int r = 5;\n"
+"   poissonDiskSamples(projCoords.xy+vec2(0.1314,0.351));"
+"   for (int i = 0; i < NUM_SAMPLES; i++) {\n"
+"       float depth = texture(shadowMap, projCoords.xy + r * poissonDisk[i] * texelSize).r;\n"
+"       if (depth < projCoords.z) {\n"
+"           count++;\n"
+"           blockerZ += depth;\n"
+"       }\n"
+"   }\n"
+"   if (count == 0 || count == (2*r+1)*(2*r+1)) return 1.0f;\n"
+"   return blockerZ / count;\n"
+"}\n"
+"float pcss(vec4 lightFragPos) {\n"
+"   vec3 projCoords = lightFragPos.xyz / lightFragPos.w;\n"
+"   projCoords = projCoords * 0.5 + 0.5;\n"
+"   const float weightOfLight = 10.0;\n"
+"   vec2 texelSize = 1.0 / textureSize(shadowMap, 0);\n"
+"   float averBlocker = averageBlockerDepth(projCoords, texelSize);\n"
+"   float penumbra = (projCoords.z - averBlocker) * weightOfLight / averBlocker;\n"
+"   float visiablity = pcf(projCoords, int(penumbra));\n"
+"   return visiablity;\n"
+"}\n"
+"void main() {\n"
+"   vec3 normal = normalize(Normal);\n"
+"   vec3 color = texture(diffuseTexture, TexCoords).rgb;\n"
+"   vec3 lightColor = vec3(0.3);\n"
+"   vec3 ambient = 0.3 * lightColor;\n"
+"   vec3 lightDir = normalize(lightPos - FragPos);\n"
+"   float diff = max(dot(lightDir, normal), 0.0);\n"
+"   vec3 diffuse = diff * lightColor;\n"
+"   vec3 viewDir = normalize(viewPos - FragPos);\n"
+"   vec3 halfwayDir = normalize(lightDir + viewDir);\n"
+"   float spec = max(dot(halfwayDir, normal), 0);\n"
+"   vec3 specular = spec * lightColor;\n"
+"   float shadow = pcss(lightFragPos);\n"
+"   vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;\n"
+"   FragColor = vec4(lighting, 1.0);\n"
+"}\n";
+
 
 glm::vec3 lightPositions[] = {
     glm::vec3(-10.0f,  10.0f, 10.0f),
@@ -754,7 +868,7 @@ glm::vec3 lightColors[] = {
 };
 
 MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) : 
-    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(SHADOWMAPPING), init(false) {
+    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(PCSS), init(false) {
     using namespace nanogui;
 
     //modelList.emplace_back(new Model("..\\models\\sara\\sara.obj", "Model 1"));
@@ -866,6 +980,13 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     debugShadowShader.setUniform("far_plane", far_plane);
     debugShadowShader.setUniform("depthMap", 0);
     shaderList.emplace_back(debugShadowShader);
+
+    GLShader pcssShader;
+    pcssShader.init("pcss_shadow_shader", pcssVertexShader, pcssFragShader);
+    pcssShader.bind();
+    pcssShader.setUniform("lightPos", vec3(-2.0f, 4.0f, -1.0f));
+    pcssShader.setUniform("lightSpaceMatrix", lightSpaceMatrix);
+    shaderList.emplace_back(pcssShader);
 
     //lightShader.init(
     //    "light_shader",
@@ -1009,6 +1130,10 @@ void MyGLCanvas::drawGL() {
         glEnable(GL_DEPTH_TEST);
         preloadShadowMapping();
     }
+    else if (preload == PCSS) {
+        glEnable(GL_DEPTH_TEST);
+        preloadPCSS();
+    }
 }
 
 string MyGLCanvas::addModel(const string& path, const string& name) {
@@ -1088,7 +1213,7 @@ Model* MyGLCanvas::firstModel() {
     return modelList[0];
 }
 
-const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
 unsigned int depthMapFBO;
 unsigned int depthMap;
 unsigned int woodTexture;
@@ -1180,6 +1305,91 @@ void MyGLCanvas::preloadShadowMapping() {
     //shaderList[13].bind();
     //glActiveTexture(GL_TEXTURE0);
     //glBindTexture(GL_TEXTURE_2D, depthMap);
+}
+
+void MyGLCanvas::preloadPCSS() {
+    if (!init) {
+        // 加载地板
+        float planeVertices[] = {
+            // positions            // normals         // texcoords
+             25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
+            -25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+            -25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
+
+             25.0f, -0.5f,  25.0f,  0.0f, 1.0f, 0.0f,  25.0f,  0.0f,
+            -25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,   0.0f, 25.0f,
+             25.0f, -0.5f, -25.0f,  0.0f, 1.0f, 0.0f,  25.0f, 25.0f
+        };
+        // plane VAO
+        unsigned int planeVBO;
+        glGenVertexArrays(1, &planeVAO);
+        glGenBuffers(1, &planeVBO);
+        glBindVertexArray(planeVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+        glBindVertexArray(0);
+        // 加载纹理
+        woodTexture = loadTexture("..\\models\\rustediron1-alt2-bl\\rustediron2_basecolor.png");
+
+        glGenFramebuffers(1, &depthMapFBO);
+        glGenTextures(1, &depthMap);
+        glBindTexture(GL_TEXTURE_2D, depthMap);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+        // 让光锥之外不是阴影
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        GLfloat borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+        glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        // 将生成的深度纹理作为深度缓冲
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        shaderList[14].bind();
+        shaderList[14].setUniform("diffuseTexture", 0);
+        shaderList[14].setUniform("shadowMap", 1);
+
+        init = true;
+    }
+    // 首先渲染深度纹理
+    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+    glScissor(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, woodTexture);
+    renderShadowScene(shaderList[11]);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // 重定义大小屏幕
+    glViewport(405, 115, 640, 640);
+    glScissor(405, 115, 640, 640);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    updateCamera();
+    view = lookAt(camera->position, camera->target, camera->up);
+    projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
+    shaderList[14].bind();
+    shaderList[14].setUniform("view", view);
+    shaderList[14].setUniform("projection", projection);
+    shaderList[14].setUniform("viewPos", camera->position);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, woodTexture);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, depthMap);
+    renderShadowScene(shaderList[14]);
 }
 
 void MyGLCanvas::renderShadowScene(nanogui::GLShader& shader) {

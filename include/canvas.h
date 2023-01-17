@@ -33,6 +33,7 @@ public:
     void preloadKlaudiaValentz();
     void preloadDiffuseIrradiance();
     void preloadShadowMapping();
+    void preloadPCSS();
     void generateShadowMap();
     void renderShadowScene(nanogui::GLShader& shader);
 

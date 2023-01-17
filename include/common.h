@@ -84,7 +84,8 @@ enum PreLoadEnum {
     PBRMAPBALLS,
     DIFFUSEIRRADIANCE,
     KLUDIAVALENTZ,
-    SHADOWMAPPING
+    SHADOWMAPPING,
+    PCSS
 };
 
 typedef struct Config {
