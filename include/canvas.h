@@ -1,8 +1,12 @@
+#ifndef PATHTRACER_CANVANS_H
+#define PATHTRACER_CANVANS_H
+
 #include <nanogui/glcanvas.h>
 #include <nanogui/glutil.h>
 #include "camera.h"
 #include "model.h"
 #include "light.h"
+#include "npr_shader.h"
 
 
 class MyGLCanvas : public nanogui::GLCanvas {
@@ -34,12 +38,15 @@ public:
     void preloadDiffuseIrradiance();
     void preloadShadowMapping();
     void preloadPCSS();
+    void preloadSDF();
+    void preloadNPR();
     void generateShadowMap();
     void renderShadowScene(nanogui::GLShader& shader);
 
     vec3 translate;
     vec3 scale;
     PreLoadEnum preload;
+    ShaderStyleEnum shaderStyle;
 
 private:
     vector<nanogui::GLShader> shaderList;
@@ -55,7 +62,11 @@ private:
     int untitleLight;
     bool init;
 
+    NPRShader nprShader;
+
     unsigned int loadTexture(char const* path);
     void renderSphere();
     void renderCube();
 };
+
+#endif // !PATHTRACER_CANVANS_H

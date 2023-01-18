@@ -9,7 +9,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/颜.png
+map_Kd Texture/face.png
 
 newmtl m1.004
 Ns 4.999998
@@ -19,7 +19,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/颜.png
+map_Kd Texture/face.png
 
 newmtl m10.004
 Ns 4.999998
@@ -29,7 +29,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/髪.png
+map_Kd Texture/hair.png
 
 newmtl m11.004
 Ns 4.999998
@@ -39,7 +39,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/衣.png
+map_Kd Texture/clothes.png
 
 newmtl m12.004
 Ns 102.500008
@@ -49,7 +49,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/衣.png
+map_Kd Texture/clothes.png
 
 newmtl m13.004
 Ns 4.999998
@@ -59,7 +59,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/衣.png
+map_Kd Texture/clothes.png
 
 newmtl m14.004
 Ns 4.999998
@@ -69,7 +69,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/衣.png
+map_Kd Texture/clothes.png
 
 newmtl m15.004
 Ns 4.999998
@@ -79,7 +79,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/衣.png
+map_Kd Texture/clothes.png
 
 newmtl m16.004
 Ns 4.999998
@@ -89,7 +89,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/衣.png
+map_Kd Texture/clothes.png
 
 newmtl m17.004
 Ns 4.999998
@@ -99,7 +99,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/肌.png
+map_Kd Texture/skin.png
 
 newmtl m18.004
 Ns 102.500008
@@ -109,7 +109,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/元素1.png
+map_Kd Texture/element.png
 
 newmtl m19.004
 Ns 4.999998
@@ -129,7 +129,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/颜.png
+map_Kd Texture/face.png
 
 newmtl m3.004
 Ns 4.999998
@@ -139,7 +139,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/颜.png
+map_Kd Texture/face.png
 
 newmtl m4.004
 Ns 4.999998
@@ -149,7 +149,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/颜.png
+map_Kd Texture/face.png
 
 newmtl m5.004
 Ns 4.999998
@@ -159,7 +159,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/颜.png
+map_Kd Texture/face.png
 
 newmtl m6.004
 Ns 4.999998
@@ -169,7 +169,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/颜.png
+map_Kd Texture/face.png
 
 newmtl m7.004
 Ns 4.999998
@@ -179,7 +179,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/?颜.png
+map_Kd Texture/face.png
 
 newmtl m8.004
 Ns 4.999998
@@ -189,7 +189,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/颜.png
+map_Kd Texture/face.png
 
 newmtl m9.004
 Ns 4.999998
@@ -199,4 +199,4 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd Texture/髪.png
+map_Kd Texture/hair.png

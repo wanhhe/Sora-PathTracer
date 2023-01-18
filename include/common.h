@@ -88,6 +88,10 @@ enum PreLoadEnum {
     PCSS
 };
 
+enum ShaderStyleEnum {
+    NPR = 0
+};
+
 typedef struct Config {
     int sampleCount;
     MaterialEnum material;

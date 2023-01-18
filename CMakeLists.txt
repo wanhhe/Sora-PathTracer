@@ -42,6 +42,7 @@ add_executable(${PROJECT_NAME}
     include/example.h
     #include/shader.h
     "include/light.h"
+    "include/npr_shader.h"
     
 
     # sources
@@ -61,7 +62,7 @@ add_executable(${PROJECT_NAME}
     src/model.cpp
     #src/shader.cpp
     "src/light.cpp"
-    
+    "src/npr_shader.cpp"
 )
 
 find_package(Threads REQUIRED)

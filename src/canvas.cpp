@@ -853,7 +853,6 @@ const string pcssFragShader =
 "   FragColor = vec4(lighting, 1.0);\n"
 "}\n";
 
-
 glm::vec3 lightPositions[] = {
     glm::vec3(-10.0f,  10.0f, 10.0f),
     glm::vec3(10.0f,  10.0f, 10.0f),
@@ -868,7 +867,7 @@ glm::vec3 lightColors[] = {
 };
 
 MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) : 
-    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(PCSS), init(false) {
+    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(PRELOAD_NONE), init(false), shaderStyle(NPR) {
     using namespace nanogui;
 
     //modelList.emplace_back(new Model("..\\models\\sara\\sara.obj", "Model 1"));
@@ -1070,49 +1069,58 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
 void MyGLCanvas::drawGL() {
     using namespace nanogui;
     if (preload == PRELOAD_NONE) {
-        if (modelList.size() == 0) return;
-        glEnable(GL_DEPTH_TEST);
-        updateCamera();
-        view = lookAt(camera->position, camera->target, camera->up);
-        projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
+        if (shaderStyle == NPR) {
+            glEnable(GL_DEPTH_TEST);
+            updateCamera();
+            view = lookAt(camera->position, camera->target, camera->up);
+            projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
+            nprShader.draw(view, projection, camera->position);
+        }
+        else {
+            if (modelList.size() == 0) return;
+            glEnable(GL_DEPTH_TEST);
+            updateCamera();
+            view = lookAt(camera->position, camera->target, camera->up);
+            projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
 
-        for (int i = 0; i < modelList.size(); i++) {
-            model[0][0] = 1.0f;
-            model[0][1] = 0.0f;
-            model[0][2] = 0.0f;
-            model[0][3] = 0.0f;
-            model[1][0] = 0.0f;
-            model[1][1] = 1.0f;
-            model[1][2] = 0.0f;
-            model[1][3] = 0.0f;
-            model[2][0] = 0.0f;
-            model[2][1] = 0.0f;
-            model[2][2] = 1.0f;
-            model[2][3] = 0.0f;
-            model[3][0] = 0.0f;
-            model[3][1] = 0.0f;
-            model[3][2] = 0.0f;
-            model[3][3] = 1.0f;
-            model = glm::translate(model, modelList[i]->translate);
-            model = glm::scale(model, modelList[i]->scale);
-            shaderList[modelList[i]->shaderIndex].bind();
-            shaderList[modelList[i]->shaderIndex].setUniform("model", model);
-            shaderList[modelList[i]->shaderIndex].setUniform("view", view);
-            shaderList[modelList[i]->shaderIndex].setUniform("projection", projection);
-            shaderList[modelList[i]->shaderIndex].setUniform("viewPos", camera->position);
-            shaderList[modelList[i]->shaderIndex].setUniform("roughness", modelList[i]->roughenss);
-            shaderList[modelList[i]->shaderIndex].setUniform("metallic", modelList[i]->metallic);
+            for (int i = 0; i < modelList.size(); i++) {
+                model[0][0] = 1.0f;
+                model[0][1] = 0.0f;
+                model[0][2] = 0.0f;
+                model[0][3] = 0.0f;
+                model[1][0] = 0.0f;
+                model[1][1] = 1.0f;
+                model[1][2] = 0.0f;
+                model[1][3] = 0.0f;
+                model[2][0] = 0.0f;
+                model[2][1] = 0.0f;
+                model[2][2] = 1.0f;
+                model[2][3] = 0.0f;
+                model[3][0] = 0.0f;
+                model[3][1] = 0.0f;
+                model[3][2] = 0.0f;
+                model[3][3] = 1.0f;
+                model = glm::translate(model, modelList[i]->translate);
+                model = glm::scale(model, modelList[i]->scale);
+                shaderList[modelList[i]->shaderIndex].bind();
+                shaderList[modelList[i]->shaderIndex].setUniform("model", model);
+                shaderList[modelList[i]->shaderIndex].setUniform("view", view);
+                shaderList[modelList[i]->shaderIndex].setUniform("projection", projection);
+                shaderList[modelList[i]->shaderIndex].setUniform("viewPos", camera->position);
+                shaderList[modelList[i]->shaderIndex].setUniform("roughness", modelList[i]->roughenss);
+                shaderList[modelList[i]->shaderIndex].setUniform("metallic", modelList[i]->metallic);
+                //glEnable(GL_DEPTH_TEST);
+                modelList[i]->draw(shaderList[modelList[i]->shaderIndex]);
+                //glDisable(GL_DEPTH_TEST);
+            }
+            //lightShader.bind();
+            //lightShader.setUniform("lightMVP", projection * view);
             //glEnable(GL_DEPTH_TEST);
-            modelList[i]->draw(shaderList[modelList[i]->shaderIndex]);
+            /* Draw 12 triangles starting at index 0 */
+            //mShader.drawIndexed(GL_TRIANGLES, 0, 12);
+            //lightShader.drawIndexed(GL_TRIANGLES, 0, 12);
             //glDisable(GL_DEPTH_TEST);
         }
-        //lightShader.bind();
-        //lightShader.setUniform("lightMVP", projection * view);
-        //glEnable(GL_DEPTH_TEST);
-        /* Draw 12 triangles starting at index 0 */
-        //mShader.drawIndexed(GL_TRIANGLES, 0, 12);
-        //lightShader.drawIndexed(GL_TRIANGLES, 0, 12);
-        //glDisable(GL_DEPTH_TEST);
     }
     else if (preload == PBRMAPBALLS) {
         glEnable(GL_DEPTH_TEST);
@@ -1211,6 +1219,14 @@ Light* MyGLCanvas::firstLight() {
 
 Model* MyGLCanvas::firstModel() {
     return modelList[0];
+}
+
+void MyGLCanvas::preloadNPR() {
+
+}
+
+void MyGLCanvas::preloadSDF() {
+
 }
 
 const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
