@@ -158,7 +158,8 @@ const string testFragShader =
 //"   if (ctrl > 0.99 || isShadow == 1) diffuse = mix(lightColor, ambientColor ,bias);\n"
 //"   vec3 lighting = rimColor + (shadow + specular) * color;\n"
 "   vec3 lighting = (rimColor + diffuse + specular) * color;\n"
-"   FragColor = vec4(lighting, rimBloom);\n"
+//"   FragColor = vec4(lighting, rimBloom);\n"
+"   FragColor = vec4(0.0, 0.5, 0.0, 1.0);\n"
 //"   FragColor = vec4(mix(ambientColor, lightColor, shadowStep), 1.0);\n"
 //"   FragColor = vec4(specular, 1.0);\n"
 //"   if (spec == 0) FragColor = vec4(0.5, 0, 0, 1.0);\n"
@@ -171,6 +172,36 @@ const string testFragShader =
 //"   if (rimBloom < 1) FragColor = vec4(0.5, 0, 0, 1.0);\n"
 //"   if (pow(f, _RimBloomExp) < 0.2) FragColor = vec4(0.5, 0, 0, 1.0);\n"
 //"   if (f > 0.6) FragColor = vec4(0, 0.5, 0, 1.0);\n"
+"}\n";
+
+const string outlineVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"layout(location = 1) in vec3 aNormal;\n"
+"layout(location = 2) in vec2 aTexCoords;\n"
+"out vec2 TexCoords;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"uniform float outlineWidth;\n"
+"uniform float aspect;\n"
+"void main() {\n"
+"   vec4 FragPos = projection * view * model * vec4(aPos, 1.0);\n"
+"   vec4 Normal = projection * view * vec4(normalize(transpose(inverse(mat3(model))) * aNormal), 0);\n"
+"   Normal.x *= aspect;\n"
+"   FragPos.xy += Normal.xy * FragPos.w * outlineWidth * 0.001\n"
+"   TexCoords = aTexCoords;\n"
+"   gl_Position = FragPos;\n"
+"}\n";
+
+const string outlineFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec2 TexCoords;\n"
+"uniform sampler2D texture_diffuse1;\n"
+"void main() {\n"
+//"   FragColor = vec4(0.5, 0.0, 0.0, 1.0);\n"
+"   FragColor = vec4(texture(texture_diffuse1, TexCoords).rgb, 1.0);\n"
 "}\n";
 
 NPRShader::NPRShader() {
@@ -210,6 +241,14 @@ NPRShader::NPRShader() {
     model = glm::translate(model, vec3(0.0));
     model = glm::scale(model, vec3(0.2));
     shader.setUniform("model", model);
+
+    // 略微放大模型，存入缓冲
+    colorBufferShader.init("outline_color_buffer_shader", outlineVertexShader, outlineFragShader);
+    colorBufferShader.bind();
+    colorBufferShader.setUniform("model", model);
+    colorBufferShader.setUniform("outlineWidth", 1.5);
+    // 应该放入绘图函数中，为了简便暂不放入
+    colorBufferShader.setUniform("aspect", 1.0);
 }
 
 void NPRShader::draw(const mat4& view, const mat4& projection, const vec3& viewPos) {
@@ -220,6 +259,13 @@ void NPRShader::draw(const mat4& view, const mat4& projection, const vec3& viewP
     //glm::vec3 newPos = lightPos + glm::vec3(sin(glfwGetTime() * 0.4) * 10.0, 0.0, 0.0);
     //shader.setUniform("lightPos", newPos);
     model->draw(shader);
+
+    glEnable(GL_CULL_FACE); // 开启面剔除
+    glCullFace(GL_FRONT); // 正面剔除
+    colorBufferShader.bind();
+    colorBufferShader.setUniform("view", view);
+    colorBufferShader.setUniform("projection", projection);
+    model->draw(colorBufferShader);
 }
 
 unsigned int NPRShader::loadTexture(char const* path)

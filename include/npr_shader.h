@@ -12,6 +12,7 @@ public:
 private:
 	Model* model;
 	nanogui::GLShader shader;
+	nanogui::GLShader colorBufferShader;
 	unsigned int bodyLightMap;
 	unsigned int hairLightMap;
 	unsigned int hairSpecularMap;
