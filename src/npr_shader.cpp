@@ -287,6 +287,56 @@ const string test2FragShader =
 //"   if(ilmTex.b == 0) FragColor = vec4(0.5, 0, 0, 1.0);\n"
 "}\n";
 
+const string test3FragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec3 FragPos;\n"
+"in vec3 Normal;\n"
+"in vec2 TexCoords;\n"
+"uniform sampler2D ilmTexture;\n"
+"uniform sampler2D texture_diffuse1;\n"
+"uniform sampler2D sdfMap;\n"
+"uniform sampler2D hairLightTexture;\n"
+"uniform vec3 lightPos;\n"
+"uniform vec3 viewPos;\n"
+"uniform vec3 _MainColor;\n"
+"uniform vec3 _ShadowColor;\n"
+"uniform float _ShadowRange;\n"
+"uniform float _ShadowSmooth;\n"
+"uniform vec3 _SpecularColor;\n"
+"uniform float _SpecularRange;\n"
+"uniform float _SpecularMulti;\n"
+"uniform float _SpecularGloss;\n"
+"uniform vec3 _LightColor0;\n"
+"uniform vec3 _FresnelColor;\n"
+"uniform float _FresnelEff;\n"
+"vec3 fresnelSchlick(float cosTheta, vec3 F0) {\n"
+"   return F0 +(1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);\n"
+"}\n"
+"void main() {\n"
+"   vec3 diffuseTex = texture(texture_diffuse1, TexCoords).rgb;\n"
+"   vec3 ilmTex = texture(ilmTexture, TexCoords).rgb;\n"
+"   vec3 normal = normalize(Normal);\n"
+"   vec3 lightDir = normalize(lightPos - FragPos);\n"
+"   vec3 viewDir = normalize(viewPos - FragPos);\n"
+"   vec3 halfDir = normalize(lightDir + viewDir);\n"
+"   float NdotH = max(dot(normal, halfDir), 0.0);\n"
+"   float halfLambert = dot(normal, lightDir) * 0.5 + 0.5;\n"
+"   float threshold = (halfLambert + ilmTex.g) * 0.5;\n"
+"   float ramp = smoothstep(0, _ShadowSmooth, _ShadowRange - halfLambert);\n"
+"   vec3 diffuse = mix(_ShadowColor, _MainColor, ramp);\n"
+"   diffuse *= diffuseTex;\n"
+"   vec3 specular = vec3(0.0);\n"
+"   float specularSize = pow(NdotH, _SpecularGloss);\n"
+"   float specularMark = ilmTex.b;\n"
+"   if (specularSize >= 1 - specularMark * _SpecularRange) {\n"
+"       specular = _SpecularMulti * ilmTex.r * _SpecularColor;\n"
+"   }\n"
+"   vec3 fresnel = _FresnelEff * fresnelSchlick(max(dot(viewDir, halfDir), 0.0), vec3(0.04));\n"
+"   vec3 color = _LightColor0 * (diffuse + specular) + fresnel * _FresnelColor;\n"
+"   FragColor = vec4(color, 1.0);\n"
+"}\n";
+
 const string outlineVertexShader =
 "#version 330 core\n"
 "layout(location = 0) in vec3 aPos;\n"
@@ -335,33 +385,55 @@ NPRShader::NPRShader() {
     //lightPos = vec3(5, 4, -1);
     lightColor = vec3(1, 0.792, 0.749);
     ambientColor = vec3(0.545, 0.490, 0.431);
-    shader.init("npr_shader", nprVertexShader, test2FragShader);
+    //shader.init("npr_shader", nprVertexShader, test2FragShader);
+    //shader.bind();
+    //shader.setUniform("lightPos", lightPos);
+    //shader.setUniform("ambientColor", ambientColor);
+    //shader.setUniform("lightColor", lightColor);
+    //shader.setUniform("specularColor", vec3(0.9));
+    //shader.setUniform("_SpecularRange", 0.7);
+    //shader.setUniform("ilmTexture", 10);
+    //shader.setUniform("sdfMap", 11);
+    //shader.setUniform("hairLightTexture", 12);
+    //shader.setUniform("_RimColor", vec3(0.949, 0.624, 0.247));
+    //shader.setUniform("_RimAmount", 0.9);
+    //shader.setUniform("_minRim", 0.65);
+    //shader.setUniform("_maxRim", 0.8);
+    //shader.setUniform("fa", 15.0);
+    //shader.setUniform("_RimBloomExp", 4.0);
+    //shader.setUniform("_ShadowAttWeight", 0.3);
+    //shader.setUniform("atten", 0.3);
+    //shader.setUniform("_DividSharpness", 1.5);
+    //shader.setUniform("_DividLineSpec", 0.8);
+    //shader.setUniform("_Glossiness", 0.8);
+    //shader.setUniform("_AOWeight", 0.6);
+    //shader.setUniform("_DividLineM", 0.0);
+    //shader.setUniform("_DividLineD", -0.5);
+    //shader.setUniform("_DarkFaceColor", vec3(0.851, 0.769, 0.671));
+    //shader.setUniform("_DeepDarkColor", vec3(0.549, 0.498, 0.827));
+    //shader.setUniform("_DiffuseBright", vec3(1.0));
+    //shader.setUniform("_FresnelEff", 0.8);
+    //shader.setUniform("_FresnelColor", vec3(0.3, 0, 0));
+    //mat4 model(1.0);
+    //model = glm::translate(model, vec3(0.0));
+    //model = glm::scale(model, vec3(0.2));
+    //shader.setUniform("model", model);
+    shader.init("npr_shader", nprVertexShader, test3FragShader);
     shader.bind();
     shader.setUniform("lightPos", lightPos);
-    shader.setUniform("ambientColor", ambientColor);
-    shader.setUniform("lightColor", lightColor);
-    shader.setUniform("specularColor", vec3(0.9));
-    shader.setUniform("_SpecularRange", 0.7);
     shader.setUniform("ilmTexture", 10);
     shader.setUniform("sdfMap", 11);
     shader.setUniform("hairLightTexture", 12);
-    shader.setUniform("_RimColor", vec3(0.949, 0.624, 0.247));
-    shader.setUniform("_RimAmount", 0.9);
-    shader.setUniform("_minRim", 0.65);
-    shader.setUniform("_maxRim", 0.8);
-    shader.setUniform("fa", 15.0);
-    shader.setUniform("_RimBloomExp", 4.0);
-    shader.setUniform("_ShadowAttWeight", 0.3);
-    shader.setUniform("atten", 0.3);
-    shader.setUniform("_DividSharpness", 1.5);
-    shader.setUniform("_DividLineSpec", 0.8);
-    shader.setUniform("_Glossiness", 0.8);
-    shader.setUniform("_AOWeight", 0.6);
-    shader.setUniform("_DividLineM", 0.0);
-    shader.setUniform("_DividLineD", -0.5);
-    shader.setUniform("_DarkFaceColor", vec3(0.851, 0.769, 0.671));
-    shader.setUniform("_DeepDarkColor", vec3(0.549, 0.498, 0.827));
-    shader.setUniform("_DiffuseBright", vec3(1.0));
+    shader.setUniform("_MainColor", vec3(1.0));
+    shader.setUniform("_ShadowColor", vec3(0.7, 0.7, 0.8));
+    shader.setUniform("_ShadowRange", 0.5);
+    shader.setUniform("_ShadowSmooth", 0.2);
+    //shader.setUniform("_LightColor0", vec3(1.0, 0.792, 0.749));
+    shader.setUniform("_LightColor0", vec3(1.0));
+    shader.setUniform("_SpecularColor", vec3(1.0));
+    shader.setUniform("_SpecularRange", 0.7);
+    shader.setUniform("_SpecularMulti", 0.3);
+    shader.setUniform("_SpecularGloss", 16.0);
     shader.setUniform("_FresnelEff", 0.8);
     shader.setUniform("_FresnelColor", vec3(0.3, 0, 0));
     mat4 model(1.0);
