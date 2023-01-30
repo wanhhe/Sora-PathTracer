@@ -85,7 +85,8 @@ enum PreLoadEnum {
     DIFFUSEIRRADIANCE,
     KLUDIAVALENTZ,
     SHADOWMAPPING,
-    PCSS
+    PCSS,
+    PBR
 };
 
 enum ShaderStyleEnum {

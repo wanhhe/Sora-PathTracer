@@ -36,6 +36,7 @@ public:
     void preloadPbrMapBalls();
     void preloadKlaudiaValentz();
     void preloadDiffuseIrradiance();
+    void preloadPBRBalls();
     void preloadShadowMapping();
     void preloadPCSS();
     void preloadSDF();
@@ -62,11 +63,12 @@ private:
     int untitleLight;
     bool init;
 
-    NPRShader nprShader;
+    //NPRShader nprShader;
 
     unsigned int loadTexture(char const* path);
     void renderSphere();
     void renderCube();
+    void renderQuad();
 };
 
 #endif // !PATHTRACER_CANVANS_H

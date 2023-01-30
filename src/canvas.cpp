@@ -498,7 +498,7 @@ const string backgroundFragShader =
 "in vec3 WorldPos;\n"
 "uniform samplerCube environmentMap;\n"
 "void main() {\n"
-"   vec3 envColor = texture(environmentMap, WorldPos).rgb;\n"
+"   vec3 envColor = textureLod(environmentMap, WorldPos, 0.0).rgb;\n"
 "   envColor = envColor / (envColor + vec3(1.0f));\n"
 "   envColor = pow(envColor, vec3(1.0/2.2));\n"
 "   FragColor = vec4(envColor, 1.0);\n"
@@ -634,6 +634,8 @@ const string iblDiffusePbrFragShader =
 "   color = color / (color + vec3(1.0f));\n"
 "   color = pow(color, vec3(1.0 / 2.2));\n"
 "   FragColor = vec4(color, 1.0);\n"
+"   vec3 gaga = Kd * diffuse;\n"
+"   if (gaga.y <= 0.1) FragColor = vec4(0.5, 0, 0, 1.0);\n"
 "}\n";
 
 const string shadowMappingDepthVertexShader =
@@ -853,6 +855,363 @@ const string pcssFragShader =
 "   FragColor = vec4(lighting, 1.0);\n"
 "}\n";
 
+const string PBRVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"layout(location = 1) in vec3 aNormal;\n"
+"layout(location = 2) in vec2 aTexCoords;\n"
+"out vec3 FragPos;\n"
+"out vec3 Normal;\n"
+"out vec2 TexCoords;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"void main() {\n"
+"   TexCoords = aTexCoords;\n"
+"   FragPos = vec3(model * vec4(aPos, 1.0));\n"
+"   Normal = transpose(inverse(mat3(model))) * aNormal;\n"
+//"   Normal = mat3(model) * aNormal;\n"
+"   gl_Position = projection * view * vec4(FragPos, 1.0);\n"
+"}\n";
+
+const string PBRFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec3 FragPos;\n"
+"in vec3 Normal;\n"
+"in vec2 TexCoords;\n"
+"uniform vec3 albedo;\n"
+"uniform float roughness;\n"
+"uniform float metallic;\n"
+"uniform float ao;\n"
+"uniform vec3 viewPos;\n"
+"uniform samplerCube irradianceMap;\n"
+"uniform samplerCube prefilterMap;\n"
+"uniform sampler2D brdfLUT;\n"
+"uniform vec3 lightPosition[4];\n"
+"uniform vec3 lightColors[4];\n"
+"const float PI = 3.14159265359;\n"
+"float DistributionGGX(vec3 N, vec3 H, float roughness) {\n"
+"   float a = roughness * roughness;\n"
+"   float a2 = a * a;\n"
+"   float NdotH = max(dot(N, H), 0.0);\n"
+"   float NdotH2 = NdotH * NdotH;\n"
+"   float nom = a2;\n"
+"   float denom = NdotH2 * (a2 - 1.0) + 1.0;\n"
+"   denom = PI * denom * denom;\n"
+"   return nom / denom;\n"
+"}\n"
+"float GeometrySchlickGGX(float NdotV, float roughness) {\n"
+"   float r = roughness + 1.0;\n"
+"   float k = r * r / 8.0;\n"
+"   float nom = NdotV;\n"
+"   float denom = NdotV * (1.0 - k) + k;\n"
+"   return nom / denom;\n"
+"}\n"
+"float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {\n"
+"   float NdotV = max(dot(N, V), 0.0);\n"
+"   float NdotL = max(dot(N, L), 0.0);\n"
+"   float ggx2 = GeometrySchlickGGX(NdotV, roughness);\n"
+"   float ggx1 = GeometrySchlickGGX(NdotL, roughness);\n"
+"   return ggx2 * ggx1;\n"
+"}\n"
+"vec3 fresnelSchlick(float cosTheta, vec3 F0) {\n"
+"   return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);\n"
+"}\n"
+"vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {\n"
+"   return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);\n"
+"}\n"
+"void main() {\n"
+"   vec3 N = normalize(Normal);\n"
+"   vec3 V = normalize(viewPos - FragPos);\n"
+"   vec3 R = reflect(-V, N);\n"
+"   vec3 F0 = vec3(0.04);\n"
+"   F0 = mix(F0, albedo, metallic);\n"
+"   vec3 Lo = vec3(0.0);\n"
+"   for (int i = 0; i < 4; i++) {\n"
+"       vec3 L = normalize(lightPosition[i] - FragPos);\n"
+"       vec3 H = normalize(V + L);\n"
+"       float distance = length(lightPosition[i] - FragPos);\n"
+"       float attenuation = 1.0 / (distance * distance);\n"
+"       vec3 radiance = lightColors[i] * attenuation;\n"
+"       float NDF = DistributionGGX(N, H, roughness);\n"
+"       float G = GeometrySmith(N, V, L, roughness);\n"
+"       vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);\n"
+"       vec3 numerator = NDF * G * F;\n"
+"       float NdotL = max(dot(N, L), 0.0);\n"
+"       float denominator = 4.0 * max(dot(N, V), 0.0) * NdotL + 0.0001;\n"
+"       vec3 specular = numerator / denominator;\n"
+"       vec3 Ks = F;\n"
+"       vec3 Kd = 1.0 - Ks;\n"
+"       Kd *= 1.0 - metallic;\n"
+"       Lo += (Kd * albedo / PI + specular) * radiance * NdotL;\n"
+"   }\n"
+"   vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);\n"
+"   vec3 Ks = F;\n"
+"   vec3 Kd = 1.0 - Ks;\n"
+"   Kd *= 1.0 - metallic;\n"
+"   vec3 irradiance = texture(irradianceMap, N).rgb;\n"
+"   vec3 diffuse = irradiance * albedo;\n"
+"   const float MAX_REFLECTION_LOD = 4.0;\n"
+"   vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOD).rgb;\n"
+"   vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;\n"
+"   vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);\n"
+"   vec3 ambient = (Kd * diffuse + specular) * ao;\n"
+//"   ambient.x -= 0.3;\n"
+//"   ambient.z -= 0.3;\n"
+"   vec3 color = ambient + Lo;\n"
+"   color = color / (color + vec3(1.0));\n"
+"   color = pow(color, vec3(1.0/ 2.2));\n"
+"   FragColor = vec4(color, 1.0);\n"
+//"   if(specular.x <= 0.0 || specular.y <= 0.3 || specular.z <= 0.3) FragColor = vec4(0, 0.5, 0, 1.0);\n"
+//"   if (irradiance.x <= 0 || irradiance.y <= 0 || irradiance.z <= 0) FragColor = vec4(0.5, 0, 0, 1.0);\n"
+//"   if (albedo.x <= 0 || albedo.y <= 0 || albedo.z <= 0) FragColor = vec4(0, 0, 0.5, 1.0);"
+//"   if (diffuse.x <= 0 || diffuse.y <= 0 || diffuse.z <= 0) FragColor = vec4(0, 0, 0.5, 1.0);"
+//"   if (prefilteredColor.x >= 0.3 || prefilteredColor.z >= 0.3) FragColor = vec4(0, 0, 0.5, 1.0);\n"
+//"   vec3 gaga = F * brdf.x + brdf.y;\n"
+//"   if (gaga.x >= 0.3 && gaga.z >= 0.3) FragColor = vec4(0.5, 0.0, 0, 1.0);\n"
+//"   if (brdf.x == 0 && brdf.y == 0) FragColor = vec4(0.5, 0, 0, 1.0);\n"
+//"   vec3 haha = Kd * diffuse;\n"
+//"   if (haha.y <= 0.1) FragColor = vec4(0.5,0,0,1.0);\n"
+"}\n";
+
+const string brdfVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"layout(location = 1) in vec2 aTexCoords;\n"
+"out vec2 TexCoords;\n"
+"void main() {\n"
+"   TexCoords = aTexCoords;\n"
+"   gl_Position = vec4(aPos, 1.0);\n"
+"}\n";
+
+const string brdfFragShader =
+"#version 330 core\n"
+"out vec2 FragColor;\n"
+"in vec2 TexCoords;\n"
+"const float PI = 3.14159265359;\n"
+"float RadicalInverse_Vdc(uint bits) {\n"
+"   bits = (bits << 16u) | (bits >> 16u);\n"
+"   bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);\n"
+"   bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);\n"
+"   bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);\n"
+"   bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);\n"
+"   return float(bits) * 2.3283064365386963e-10;\n"
+"}\n"
+"vec2 Hammersley(uint i, uint N) {\n"
+"   return vec2(float(i) / float(N), RadicalInverse_Vdc(i));\n"
+"}\n"
+"vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness) {\n"
+"   float a = roughness * roughness;\n"
+"   float phi = 2.0 * PI * Xi.x;\n"
+"   float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a*a - 1.0) * Xi.y));\n"
+"   float sinTheta = sqrt(1.0 - cosTheta * cosTheta);\n"
+"   vec3 H;\n"
+"   H.x = cos(phi) * sinTheta;\n"
+"   H.y = sin(phi) * sinTheta;\n"
+"   H.z = cosTheta;\n"
+"   vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);\n"
+"   vec3 tangent = normalize(cross(up, N));\n"
+"   vec3 bitangent = cross(N, tangent);\n"
+"   vec3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;\n"
+"   return normalize(sampleVec);\n"
+"}\n"
+"float GeometrySchlickGGX(float NdotV, float roughness) {\n"
+"   float a = roughness;\n"
+"   float k = a * a / 2.0;\n"
+"   float nom = NdotV;\n"
+"   float denom = NdotV * (1.0 - k) + k;\n"
+"   return nom / denom;\n"
+"}\n"
+"float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {\n"
+"   float NdotV = max(dot(N, V), 0.0);\n"
+"   float NdotL = max(dot(N, L), 0.0);\n"
+"   float ggx2 = GeometrySchlickGGX(NdotV, roughness);\n"
+"   float ggx1 = GeometrySchlickGGX(NdotL, roughness);\n"
+"   return ggx2 * ggx1;\n"
+"}\n"
+"vec2 IntegrateBRDF(float NdotV, float roughness) {\n"
+"   vec3 V;\n"
+"   V.x = sqrt(1.0 - NdotV*NdotV);\n"
+"   V.y = 0.0;\n"
+"   V.z = NdotV;\n"
+"   float A = 0.0;\n"
+"   float B = 0.0;\n"
+"   vec3 N = vec3(0.0, 0.0, 1.0);\n"
+"   const uint SAMPLE_COUNT = 1024u;\n"
+"   for (uint i = 0u; i < SAMPLE_COUNT; i++) {\n"
+"       vec2 Xi = Hammersley(i, SAMPLE_COUNT);\n"
+"       vec3 H = ImportanceSampleGGX(Xi, N, roughness);\n"
+"       vec3 L = normalize(2.0 * dot(V, H) * H - V);\n"
+"       float NdotL = max(L.z, 0.0);\n"
+"       float NdotH = max(H.z, 0.0);\n"
+"       float VdotH = max(dot(V, H), 0.0);\n"
+"       if (NdotL > 0.0) {\n"
+"           float G = GeometrySmith(N, V, L, roughness);\n"
+"           float G_Vis = (G * VdotH) / (NdotH * NdotV);\n"
+"           float Fc = pow(1.0 - VdotH, 5.0);\n"
+"           A += (1.0 - Fc) * G_Vis;\n"
+"           B += Fc * G_Vis;\n"
+"       }\n"
+"   }\n"
+"   A /= float(SAMPLE_COUNT);\n"
+"   B /= float(SAMPLE_COUNT);\n"
+"   return vec2(A, B);\n"
+"}\n"
+"void main() {\n"
+"   vec2 integratedBRDF = IntegrateBRDF(TexCoords.x, TexCoords.y);\n"
+"   FragColor = integratedBRDF;\n"
+"}\n";
+//const string brdfFragShader =
+//"#version 330 core\n"
+//"out vec2 FragColor;\n"
+//"in vec2 TexCoords;\n"
+//"const float PI = 3.14159265359;\n"
+//"float RadicalInverse_VdC(uint bits) {\n"
+//    "bits = (bits << 16u) | (bits >> 16u);\n"
+//    "bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);\n"
+//    "bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);\n"
+//    "bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);\n"
+//    "bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);\n"
+//    "return float(bits) * 2.3283064365386963e-10;\n"
+//"}\n"
+//"vec2 Hammersley(uint i, uint N) {\n"
+//    "return vec2(float(i) / float(N), RadicalInverse_VdC(i));\n"
+//"}\n"
+//"vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness) {\n"
+//    "float a = roughness * roughness;\n"
+//    "float phi = 2.0 * PI * Xi.x;\n"
+//    "float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));\n"
+//    "float sinTheta = sqrt(1.0 - cosTheta * cosTheta);\n"
+//    "vec3 H;\n"
+//    "H.x = cos(phi) * sinTheta;\n"
+//    "H.y = sin(phi) * sinTheta;\n"
+//    "H.z = cosTheta;\n"
+//    "vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);\n"
+//    "vec3 tangent = normalize(cross(up, N));\n"
+//    "vec3 bitangent = cross(N, tangent);\n"
+//    "vec3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;\n"
+//    "return normalize(sampleVec);\n"
+//"}\n"
+//"float GeometrySchlickGGX(float NdotV, float roughness) {\n"
+//    "float a = roughness;\n"
+//    "float k = (a * a) / 2.0;\n"
+//    "float nom = NdotV;\n"
+//    "float denom = NdotV * (1.0 - k) + k;\n"
+//    "return nom / denom;\n"
+//"}\n"
+//"float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {\n"
+//    "float NdotV = max(dot(N, V), 0.0);\n"
+//    "float NdotL = max(dot(N, L), 0.0);\n"
+//    "float ggx2 = GeometrySchlickGGX(NdotV, roughness);\n"
+//    "float ggx1 = GeometrySchlickGGX(NdotL, roughness);\n"
+//    "return ggx1 * ggx2;\n"
+//"}\n"
+//"vec2 IntegrateBRDF(float NdotV, float roughness) {\n"
+//    "vec3 V;\n"
+//    "V.x = sqrt(1.0 - NdotV * NdotV);\n"
+//    "V.y = 0.0;\n"
+//    "V.z = NdotV;\n"
+//    "float A = 0.0;\n"
+//    "float B = 0.0;\n"
+//    "vec3 N = vec3(0.0, 0.0, 1.0);\n"
+//    "const uint SAMPLE_COUNT = 1024u;\n"
+//    "for (uint i = 0u; i < SAMPLE_COUNT; ++i) {\n"
+//        "vec2 Xi = Hammersley(i, SAMPLE_COUNT);\n"
+//        "vec3 H = ImportanceSampleGGX(Xi, N, roughness);\n"
+//        "vec3 L = normalize(2.0 * dot(V, H) * H - V);\n"
+//        "float NdotL = max(L.z, 0.0);\n"
+//        "float NdotH = max(H.z, 0.0);\n"
+//        "float VdotH = max(dot(V, H), 0.0);\n"
+//        "if (NdotL > 0.0) {\n"
+//            "float G = GeometrySmith(N, V, L, roughness);\n"
+//            "float G_Vis = (G * VdotH) / (NdotH * NdotV);\n"
+//            "float Fc = pow(1.0 - VdotH, 5.0);\n"
+//            "A += (1.0 - Fc) * G_Vis;\n"
+//            "B += Fc * G_Vis;\n"
+//        "}\n"
+//    "}\n"
+//    "A /= float(SAMPLE_COUNT);\n"
+//    "B /= float(SAMPLE_COUNT);\n"
+//    "return vec2(A, B);\n"
+//"}\n"
+//"void main() {\n"
+//"vec2 integratedBRDF = IntegrateBRDF(TexCoords.x, TexCoords.y);\n"
+//"FragColor = integratedBRDF;\n"
+//"}\n";
+
+const string prefilterFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec3 WorldPos;\n"
+"uniform samplerCube environmentMap;\n"
+"uniform float roughness;\n"
+"const float PI = 3.14159265359;\n"
+"float DistributionGGX(vec3 N, vec3 H, float roughness) {\n"
+"   float a = roughness * roughness;\n"
+"   float a2 = a * a;\n"
+"   float NdotH = max(dot(N, H), 0.0);\n"
+"   float NdotH2 = NdotH * NdotH;\n"
+"   float nom = a2;\n"
+"   float denom = NdotH2 * (a2 - 1.0) + 1.0;\n"
+"   denom = PI * denom * denom;\n"
+"   return nom / denom;\n"
+"}\n"
+"float RadicalInverse_Vdc(uint bits) {\n"
+"   bits = (bits << 16u) | (bits >> 16u);\n"
+"   bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);\n"
+"   bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);\n"
+"   bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);\n"
+"   bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);\n"
+"   return float(bits) * 2.3283064365386963e-10;\n"
+"}\n"
+"vec2 Hammersley(uint i, uint N) {\n"
+"   return vec2(float(i) / float(N), RadicalInverse_Vdc(i));\n"
+"}\n"
+"vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness) {\n"
+"   float a = roughness * roughness;\n"
+"   float phi = 2.0 * PI * Xi.x;\n"
+"   float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a*a - 1.0) * Xi.y));\n"
+"   float sinTheta = sqrt(1.0 - cosTheta * cosTheta);\n"
+"   vec3 H;\n"
+"   H.x = cos(phi) * sinTheta;\n"
+"   H.y = sin(phi) * sinTheta;\n"
+"   H.z = cosTheta;\n"
+"   vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);\n"
+"   vec3 tangent = normalize(cross(up, N));\n"
+"   vec3 bitangent = cross(N, tangent);\n"
+"   vec3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;\n"
+"   return normalize(sampleVec);\n"
+"}\n"
+"void main() {\n"
+"   vec3 N = normalize(WorldPos);\n"
+"   vec3 R = N;\n"
+"   vec3 V = R;\n"
+"   const uint SAMPLE_COUNT = 1024u;\n"
+"   vec3 prefilteredColor = vec3(0.0);\n"
+"   float totalWeight = 0.0;\n"
+"   const float resolution = 512.0;\n"
+"   for(uint i = 0u; i < SAMPLE_COUNT; i++) {\n"
+"       vec2 Xi = Hammersley(i, SAMPLE_COUNT);\n"
+"       vec3 H = ImportanceSampleGGX(Xi, N, roughness);\n"
+"       vec3 L = normalize(2.0 * dot(V, H) * H - V);\n"
+"       float NdotL = max(dot(N, L), 0.0);\n"
+"       if (NdotL > 0.0) {\n"
+"           float D   = DistributionGGX(N, H, roughness);\n"
+"           float NdotH = max(dot(N, H), 0.0);\n"
+"           float HdotV = max(dot(H, V), 0.0);\n"
+"           float pdf = D * NdotH / (4.0 * HdotV) + 0.0001;\n"
+"           float saTexel = 4.0 * PI / (6.0 * resolution * resolution);\n"
+"           float saSample = 1.0 / (float(SAMPLE_COUNT) * pdf + 0.0001);\n"
+"           float mipLevel = roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel);\n"
+"           prefilteredColor += textureLod(environmentMap, L, mipLevel).rgb * NdotL;\n"
+"           totalWeight += NdotL;\n"
+"       }\n"
+"   }\n"
+"   prefilteredColor = prefilteredColor / totalWeight;\n"
+"   FragColor = vec4(prefilteredColor, 1.0);\n"
+"}\n";
+
 glm::vec3 lightPositions[] = {
     glm::vec3(-10.0f,  10.0f, 10.0f),
     glm::vec3(10.0f,  10.0f, 10.0f),
@@ -867,15 +1226,18 @@ glm::vec3 lightColors[] = {
 };
 
 MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) : 
-    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(PRELOAD_NONE), init(false), shaderStyle(NPR) {
+    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(PBR), init(false), shaderStyle(NPR) {
     using namespace nanogui;
 
     //modelList.emplace_back(new Model("..\\models\\sara\\sara.obj", "Model 1"));
+
+    // 0
     GLShader diffuseShder;
     diffuseShder.init("diffuse_shader", diffuseVertexShader, diffuseFragShader);
     diffuseShder.bind();
     shaderList.emplace_back(diffuseShder);
 
+    // 1
     GLShader phongShader;
     phongShader.init("phong_shader", phongVertexShader, phongFragShader);
     phongShader.bind();
@@ -884,6 +1246,7 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     phongShader.setUniform("lightColor", vec3(1.0, 1.0, 1.0));
     shaderList.emplace_back(phongShader);
 
+    // 2
     GLShader blinnPhongShder;
     blinnPhongShder.init("blinn_phong_shader", blinnPhongVertexShader, blinnPhongFragShader);
     blinnPhongShder.bind();
@@ -895,6 +1258,7 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     blinnPhongShder.setUniform("ks", vec3(0.1f));
     shaderList.emplace_back(blinnPhongShder);
 
+    // 3
     GLShader bumpShader;
     bumpShader.init("bump_shader", bumpVertexShader, bumpFragShader);
     bumpShader.bind();
@@ -909,6 +1273,8 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     //mapShader.setUniform("viewPos", camera->position);
     //shaderList.emplace_back(mapShader);
 
+
+    // 4
     GLShader cooktorranceShader;
     cooktorranceShader.init("cook_torrance_pbr_shader", cookTorranceVertexShader, cookTorranceFragShader);
     cooktorranceShader.bind();
@@ -923,31 +1289,40 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     cooktorranceShader.setUniform("albedo", vec3(0.5f, 0.0f, 0.0f));
     shaderList.emplace_back(cooktorranceShader);
 
+    // 5
     GLShader pbrMapShader;
     pbrMapShader.init("pbr_map_shader", pbrMapVertexShader, pbrMapFragShader);
     shaderList.emplace_back(pbrMapShader);
 
+    // 6
     GLShader cubeMapShader;
-    cubeMapShader.init("ibl_cube_hdr_map_shader", cubeMapVertexShader, cubeMapFragShader);
+    //cubeMapShader.init("ibl_cube_hdr_map_shader", cubeMapVertexShader, cubeMapFragShader);
+    cubeMapShader.initFromFiles("ibl_cube_hdr_map_shader", "cubemap_vs.txt", "equirectangular_to_cubemap_fs.txt");
     shaderList.emplace_back(cubeMapShader);
 
+    // 7
     GLShader backgroundShader;
-    backgroundShader.init("simple_skybox_shader", backgroundVertexShader, backgroundFragShader);
+    //backgroundShader.init("simple_skybox_shader", backgroundVertexShader, backgroundFragShader);
+    backgroundShader.initFromFiles("simple_skybox_shader", "background_vs.txt", "background_fs.txt");
     shaderList.emplace_back(backgroundShader);
 
+    // 8
     GLShader hdrboxShader;
     hdrboxShader.init("test_shader", hdrboxVertexShader, hdrboxFragShader);
     shaderList.emplace_back(hdrboxShader);
 
+    // 9
     GLShader irradianceConvolutionShader;
-    irradianceConvolutionShader.init("irradiance_convolution_shader", cubeMapVertexShader, irradianceConvolutionFragShader);
+    //irradianceConvolutionShader.init("irradiance_convolution_shader", cubeMapVertexShader, irradianceConvolutionFragShader);
+    irradianceConvolutionShader.initFromFiles("irradiance_convolution_shader", "cubemap_vs.txt", "irradiance_convolution_fs.txt");
     shaderList.emplace_back(irradianceConvolutionShader);
 
+    // 10
     GLShader diffusePbrShader;
     diffusePbrShader.init("diffuse_ibl_shader", cookTorranceVertexShader, iblDiffusePbrFragShader);
     diffusePbrShader.bind();
     diffusePbrShader.setUniform("ao", 1.0f);
-    diffusePbrShader.setUniform("albedo", vec3(0.5f, 0.0f, 0.0f));
+    diffusePbrShader.setUniform("albedo", vec3(0.0f, 0.5f, 0.0f));
     shaderList.emplace_back(diffusePbrShader);
 
 
@@ -958,6 +1333,7 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     lightView = glm::lookAt(vec3(-2.0f, 4.0f, -1.0f), glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
     lightSpaceMatrix = lightProjection * lightView;
 
+     // 11
     GLShader shadowDepthShader;
     shadowDepthShader.init("shadow_map_depth_shader", shadowMappingDepthVertexShader, shadowMappingDepthFragShader);
     // render scene from light's point of view
@@ -965,6 +1341,7 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     shadowDepthShader.setUniform("lightSpaceMatrix", lightSpaceMatrix);
     shaderList.emplace_back(shadowDepthShader);
 
+    // 12
     GLShader shadowShader;
     shadowShader.init("shadow_map_shader", shadowMappingVertexShader, shadowMappingFragShader);
     shadowShader.bind();
@@ -972,6 +1349,7 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     shadowShader.setUniform("lightSpaceMatrix", lightSpaceMatrix);
     shaderList.emplace_back(shadowShader);
 
+    // 13
     GLShader debugShadowShader;
     debugShadowShader.init("debug_shadow_shader", shadowDebugVertexShader, shadowDebugFragShader);
     debugShadowShader.bind();
@@ -980,12 +1358,31 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     debugShadowShader.setUniform("depthMap", 0);
     shaderList.emplace_back(debugShadowShader);
 
+    // 14
     GLShader pcssShader;
     pcssShader.init("pcss_shadow_shader", pcssVertexShader, pcssFragShader);
     pcssShader.bind();
     pcssShader.setUniform("lightPos", vec3(-2.0f, 4.0f, -1.0f));
     pcssShader.setUniform("lightSpaceMatrix", lightSpaceMatrix);
     shaderList.emplace_back(pcssShader);
+
+    // 15
+    GLShader prefilterShader;
+    //prefilterShader.init("prefilter_color_shader", cubeMapVertexShader, prefilterFragShader);
+    prefilterShader.initFromFiles("prefilter_color_shader", "cubemap_vs.txt", "prefilter_fs.txt");
+    shaderList.emplace_back(prefilterShader);
+
+    // 16
+    GLShader brdfShader;
+    //brdfShader.init("brdf_sample_shader", brdfVertexShader, brdfFragShader);
+    brdfShader.initFromFiles("brdf_sample_shader", "brdf_vs.txt", "brdf_fs.txt");
+    shaderList.emplace_back(brdfShader);
+
+    // 17
+    GLShader pbrShader;
+    pbrShader.initFromFiles("pbr_shader", "vertex.txt", "frag.txt");
+    //pbrShader.init("pbr_shader", PBRVertexShader, PBRFragShader);
+    shaderList.emplace_back(pbrShader);
 
     //lightShader.init(
     //    "light_shader",
@@ -1074,7 +1471,7 @@ void MyGLCanvas::drawGL() {
             updateCamera();
             view = lookAt(camera->position, camera->target, camera->up);
             projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
-            nprShader.draw(view, projection, camera->position);
+            //nprShader.draw(view, projection, camera->position);
         }
         else {
             if (modelList.size() == 0) return;
@@ -1141,6 +1538,12 @@ void MyGLCanvas::drawGL() {
     else if (preload == PCSS) {
         glEnable(GL_DEPTH_TEST);
         preloadPCSS();
+    }
+    else if (preload == PBR) {
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LEQUAL);
+        glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+        preloadPBRBalls();
     }
 }
 
@@ -1752,6 +2155,279 @@ void MyGLCanvas::preloadDiffuseIrradiance() {
     renderCube();
 }
 
+unsigned int prefilterMap;
+unsigned int brdfLUTTexture;
+
+void MyGLCanvas::preloadPBRBalls() {
+    if (!init) {
+        shaderList[17].bind();
+        shaderList[17].setUniform("irradianceMap", 0);
+        shaderList[17].setUniform("prefilterMap", 1);
+        shaderList[17].setUniform("brdfLUT", 2);
+        shaderList[17].setUniform("albedo", vec3(0.5f, 0.0f, 0.0f));
+        shaderList[17].setUniform("ao", 1.0f);
+
+        shaderList[7].bind();
+        shaderList[7].setUniform("environmentMap", 0);
+
+        // pbr: setup framebuffer
+        // ----------------------
+        unsigned int captureFBO;
+        unsigned int captureRBO;
+        glGenFramebuffers(1, &captureFBO);
+        glGenRenderbuffers(1, &captureRBO);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+        glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
+
+        // pbr: load the HDR environment map
+        // ---------------------------------
+        stbi_set_flip_vertically_on_load(true);
+        int width, height, nrComponents;
+        float* data = stbi_loadf("..\\models\\HDR\\Newport_Loft\\Newport_Loft_Ref.hdr", &width, &height, &nrComponents, 0);
+        unsigned int hdrTexture;
+        if (data)
+        {
+            glGenTextures(1, &hdrTexture);
+            glBindTexture(GL_TEXTURE_2D, hdrTexture);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data); // note how we specify the texture's data value to be float
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+            stbi_image_free(data);
+        }
+        else
+        {
+            std::cout << "Failed to load HDR image." << std::endl;
+        }
+
+        //float* data2 = stbi_loadf("ibl_brdf_lut.png", &width, &height, &nrComponents, 0);
+        //if (data2)
+        //{
+        //    glGenTextures(1, &brdfLUTTexture);
+        //    glActiveTexture(GL_TEXTURE2);
+        //    glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
+        //    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data2);
+
+        //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        //    stbi_image_free(data2);
+        //    glActiveTexture(GL_TEXTURE0);
+        //    std::cout << nrComponents << std::endl;
+        //}
+        //else
+        //{
+        //    std::cout << "Failed to load HDR image." << std::endl;
+        //}
+
+        // pbr: setup cubemap to render to and attach to framebuffer
+        // ---------------------------------------------------------
+        glGenTextures(1, &envCubeMap);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, envCubeMap);
+        for (unsigned int i = 0; i < 6; ++i)
+        {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 512, 512, 0, GL_RGB, GL_FLOAT, nullptr);
+        }
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        // pbr: set up projection and view matrices for capturing data onto the 6 cubemap face directions
+        // ----------------------------------------------------------------------------------------------
+        glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+        glm::mat4 captureViews[] =
+        {
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+            glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+        };
+
+        // pbr: convert HDR equirectangular environment map to cubemap equivalent
+        // ----------------------------------------------------------------------
+        shaderList[6].bind();
+        shaderList[6].setUniform("equirectangularMap", 0);
+        shaderList[6].setUniform("projection", captureProjection);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, hdrTexture);
+
+        glViewport(0, 0, 512, 512); // don't forget to configure the viewport to the capture dimensions.
+        glScissor(0, 0, 512, 512);
+        glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+        for (unsigned int i = 0; i < 6; ++i)
+        {
+            shaderList[6].setUniform("view", captureViews[i]);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, envCubeMap, 0);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            renderCube();
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, envCubeMap);
+        glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+        // convolute irradiance
+        glGenTextures(1, &irradianceMap);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
+        for (unsigned int i = 0; i < 6; i++) {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 32, 32, 0, GL_RGB, GL_FLOAT, nullptr);
+        }
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+        glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 32, 32);
+        shaderList[9].bind();
+        shaderList[9].setUniform("environmentMap", 0);
+        shaderList[9].setUniform("projection", captureProjection);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, envCubeMap);
+        glViewport(0, 0, 32, 32);
+        glScissor(0, 0, 32, 32);
+        glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+        for (unsigned int i = 0; i < 6; i++) {
+            shaderList[9].setUniform("view", captureViews[i]);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, irradianceMap, 0);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            renderCube();
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        // prefilter cubemap
+        glGenTextures(1, &prefilterMap);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
+        for (unsigned int i = 0; i < 6; i++) {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 128, 128, 0, GL_RGB, GL_FLOAT, nullptr);
+        }
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // be sure to set minification filter to mip_linear 
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+        shaderList[15].bind();
+        shaderList[15].setUniform("environmentMap", 0);
+        shaderList[15].setUniform("projection", captureProjection);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, envCubeMap);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+        unsigned int maxMipLevels = 5;
+        for (unsigned int mip = 0; mip < maxMipLevels; ++mip)
+        {
+            // reisze framebuffer according to mip-level size.
+            unsigned int mipWidth = static_cast<unsigned int>(128 * std::pow(0.5, mip));
+            unsigned int mipHeight = static_cast<unsigned int>(128 * std::pow(0.5, mip));
+            glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, mipWidth, mipHeight);
+            glViewport(0, 0, mipWidth, mipHeight);
+            glScissor(0, 0, mipWidth, mipHeight);
+
+            float roughness = (float)mip / (float)(maxMipLevels - 1);
+            shaderList[15].setUniform("roughness", roughness);
+            for (unsigned int i = 0; i < 6; ++i)
+            {
+                shaderList[15].setUniform("view", captureViews[i]);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, prefilterMap, mip);
+
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                renderCube();
+            }
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        // brdf lut texture
+        glGenTextures(1, &brdfLUTTexture);
+        glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, 512, 512, 0, GL_RG, GL_FLOAT, 0);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+        glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 512, 512);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, brdfLUTTexture, 0);
+        glViewport(0, 0, 512, 512);
+        glScissor(0, 0, 512, 512);
+        shaderList[16].bind();
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        renderQuad();
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        // then before rendering, configure the viewport to the original framebuffer's screen dimensions
+        glViewport(405, 115, 640, 640);
+        glScissor(405, 115, 640, 640);
+        init = true;
+    }
+    updateCamera();
+    view = lookAt(camera->position, camera->target, camera->up);
+    projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
+
+    shaderList[17].bind();
+    shaderList[17].setUniform("view", view);
+    shaderList[17].setUniform("projection", projection);
+    shaderList[17].setUniform("viewPos", camera->position);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, brdfLUTTexture);
+    for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i)
+    {
+        glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
+        shaderList[17].setUniform("lightPosition[" + std::to_string(i) + "]", newPos);
+        shaderList[17].setUniform("lightColors[" + std::to_string(i) + "]", lightColors[i]);
+    }
+    glm::mat4 model = glm::mat4(1.0f);
+    for (int row = 0; row < nrRows; ++row)
+    {
+        shaderList[17].setUniform("metallic", (float)row / (float)nrRows);
+        for (int col = 0; col < nrColumns; ++col)
+        {
+            shaderList[17].setUniform("roughness", glm::clamp((float)col / (float)nrColumns, 0.05f, 1.0f));
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(
+                (float)(col - (nrColumns / 2)) * spacing,
+                (float)(row - (nrRows / 2)) * spacing,
+                -2.0f
+            ));
+            shaderList[17].setUniform("model", model);
+            renderSphere();
+        }
+    }
+
+    // render skybox (render as last to prevent overdraw)
+    shaderList[7].bind();
+    shaderList[7].setUniform("view", view);
+    shaderList[7].setUniform("projection", projection);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, envCubeMap);
+    //glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap); // display irradiance map
+        //glBindTexture(GL_TEXTURE_CUBE_MAP, prefilterMap); // display prefilter map
+    renderCube();
+
+    // render BRDF map to screen
+        //shaderList[16].bind();
+        //renderQuad();
+}
+
 unsigned int klaudiaVAO = 0;
 void MyGLCanvas::preloadKlaudiaValentz() {
     string id = addModel("..\\models\\KlaudiaValentz\\KlaudiaValentz.obj", "Klaudia");
@@ -1925,6 +2601,37 @@ void MyGLCanvas::renderCube()
     // render Cube
     glBindVertexArray(cubeVAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
+}
+
+// renderQuad() renders a 1x1 XY quad in NDC
+// -----------------------------------------
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+void MyGLCanvas::renderQuad()
+{
+    if (quadVAO == 0)
+    {
+        float quadVertices[] = {
+            // positions        // texture Coords
+            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+             1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+        };
+        // setup plane VAO
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    }
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
 }
 
