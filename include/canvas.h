@@ -37,6 +37,7 @@ public:
     void preloadKlaudiaValentz();
     void preloadDiffuseIrradiance();
     void preloadPBRBalls();
+    void preloadIBLMapBalls();
     void preloadShadowMapping();
     void preloadPCSS();
     void preloadSDF();
