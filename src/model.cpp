@@ -40,6 +40,14 @@ void Model::drawHairShadowStencil(nanogui::GLShader& shader) {
 	}
 }
 
+void Model::drawFaceAfterSampleHairShadowStencil(nanogui::GLShader& shader) {
+	for (int i = 0; i < meshes.size(); i++) {
+		if (meshes[i].isFace) {
+			meshes[i].drwaFaceAfterSampleHairShadowStencil(shader);
+		}
+	}
+}
+
 void Model::loadModel(const string& path) {
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);

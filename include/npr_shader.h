@@ -18,6 +18,7 @@ private:
 	nanogui::GLShader testotherShader;
 	nanogui::GLShader lastFaceShader;
 	nanogui::GLShader hairShadowStencilShader;
+	nanogui::GLShader faceHairShadowShader;
 	unsigned int bodyLightMap;
 	unsigned int hairLightMap;
 	unsigned int hairSpecularMap;

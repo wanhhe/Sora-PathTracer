@@ -198,8 +198,56 @@ void Mesh::drawFaceStencil(nanogui::GLShader& shader) {
 
 void Mesh::drawHairShadowStencil(nanogui::GLShader& shader) {
     glStencilFunc(GL_EQUAL, 128, 0xFF);
-    glStencilMask(0x00);
+    //glStencilMask(0x00);
+    glStencilMask(0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_INCR);
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    glDepthMask(GL_FALSE);
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+    glDepthMask(GL_TRUE);
+}
+
+void Mesh::drwaFaceAfterSampleHairShadowStencil(nanogui::GLShader& shader) {
+    unsigned int diffuseNr = 1;
+    unsigned int specularNr = 1;
+    unsigned int normalNr = 1;
+    unsigned int emissionNr = 1;
+    for (unsigned int i = 0; i < textures.size(); i++) {
+        glActiveTexture(GL_TEXTURE0 + i);
+        string number;
+        string name = textures[i].type;
+        if (name == "texture_diffuse") {
+            number = std::to_string(diffuseNr);
+            diffuseNr++;
+        }
+        else if (name == "texture_specular") {
+            number = std::to_string(specularNr);
+            specularNr++;
+        }
+        else if (name == "texture_normal") {
+            number = std::to_string(normalNr);
+            normalNr++;
+        }
+        else if (name == "texture_emission") {
+            number = std::to_string(emissionNr);
+            emissionNr++;
+        }
+        glUniform1i(glGetUniformLocation(shader.getShaderID(), (name + number).c_str()), i);
+        glBindTexture(GL_TEXTURE_2D, textures[i].id);
+    }
+    glActiveTexture(GL_TEXTURE0);
+
+    glStencilFunc(GL_EQUAL, 129, 0xFF);
+    glStencilMask(0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+    //glDisable(GL_STENCIL_TEST);
+    glDepthFunc(GL_LEQUAL);
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+    glDepthFunc(GL_LESS);
 }

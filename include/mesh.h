@@ -34,6 +34,7 @@ public:
 	void drawHairShadow(nanogui::GLShader shader);
 	void drawFaceStencil(nanogui::GLShader& shader);
 	void drawHairShadowStencil(nanogui::GLShader& shader);
+	void drwaFaceAfterSampleHairShadowStencil(nanogui::GLShader& shader);
 
 private:
 	unsigned int VAO, VBO, EBO;

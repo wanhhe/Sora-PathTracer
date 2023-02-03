@@ -14,6 +14,7 @@ public:
 	void drawHairShadow(nanogui::GLShader& shader);
 	void drawFaceStencil(nanogui::GLShader& shader);
 	void drawHairShadowStencil(nanogui::GLShader& shader);
+	void drawFaceAfterSampleHairShadowStencil(nanogui::GLShader& shader);
 
 	vec3 translate;
 	vec3 scale;
