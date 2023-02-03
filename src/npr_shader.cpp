@@ -368,6 +368,195 @@ const string outlineFragShader =
 "   FragColor = vec4(texture(texture_diffuse1, TexCoords).rgb * outlineColor, 1.0);\n"
 "}\n";
 
+const string hairShadowVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"layout(location = 1) in vec3 aNormal;\n"
+"layout(location = 2) in vec2 aTexCoords;\n"
+"out vec2 TexCoords;\n"
+"out vec3 FragPos;\n"
+"out vec3 Normal;\n"
+"out vec3 lightPos;\n"
+"out vec4 lightFragPos;\n"
+"uniform vec3 aLightPos;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"uniform float _Offset;\n"
+"void main() {\n"
+"   FragPos = vec3(model * vec4(aPos, 1.0));\n"
+"   Normal = transpose(inverse(mat3(model))) * aNormal;\n"
+"   TexCoords = aTexCoords;\n"
+"   vec3 lightDir = normalize(aLightPos - FragPos);\n"
+"   lightPos = aLightPos;\n"
+"   vec4 lightOffset = projection * view * vec4(lightDir, 1.0);\n"
+"   vec4 position = view * vec4(FragPos, 1.0);\n"
+"   position = projection * position;\n"
+"   position.xy -= normalize(lightOffset.xy) * 0.005;\n"
+"   gl_Position = position;\n"
+"}\n";
+
+const string hairShadowFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec3 FragPos;\n"
+"in vec4 lightFragPos;\n"
+"in vec2 TexCoords;\n"
+"in vec3 lightPos;\n"
+"uniform vec3 _ShadowColor;\n"
+"void main() {\n"
+"   FragColor = vec4(1.0,0,0, 1.0);\n"
+"}\n";
+
+const string testhairShadowVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"out vec4 FragPos;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"void main() {\n"
+"   gl_Position = projection * view * model * vec4(aPos, 1.0);\n"
+"   FragPos = gl_Position;\n"
+"}\n";
+
+const string testhairShadowFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec4 FragPos;\n"
+"uniform vec3 color;\n"
+"void main() {\n"
+//"   FragColor = vec4(color, 1.0);\n"
+//"   FragColor = vec4(1.0);\n"
+"   float depth = FragPos.z / FragPos.w;\n"
+"   depth = depth * 0.5 + 0.5;\n"
+"   if (depth < 0.9) FragColor = vec4(1.0,0,0,1.0);\n"
+"   if (depth > 0.9) FragColor = vec4(0,1.0,0,1.0);\n"
+//"   FragColor = vec4(depth, 0.0, 0.0, 1.0);\n"
+"}\n";
+
+const string faceVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"layout(location = 1) in vec3 aNormal;\n"
+"layout(location = 2) in vec2 aTexCoords;\n"
+"out vec3 FragPos;\n"
+"out vec4 position;\n"
+"out vec3 Normal;\n"
+"out vec2 TexCoords;\n"
+"out vec3 viewLight;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"uniform vec3 aLightPos;\n"
+"void main() {\n"
+"   FragPos = vec3(model * vec4(aPos, 1.0));\n"
+"   Normal = transpose(inverse(mat3(model))) * aNormal;\n"
+"   TexCoords = aTexCoords;\n"
+"   position = projection * view * vec4(FragPos, 1.0);\n"
+"   viewLight = vec3(view * vec4(aLightPos, 1.0));\n"
+"   gl_Position = position;\n"
+"}\n";
+
+const string faceFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"in vec3 FragPos;\n"
+"in vec3 Normal;\n"
+"in vec2 TexCoords;\n"
+"in vec4 position;\n"
+"in vec3 viewLight;\n"
+"uniform sampler2D ilmTexture;\n"
+"uniform sampler2D texture_diffuse1;\n"
+"uniform sampler2D sdfMap;\n"
+"uniform sampler2D hairLightTexture;\n"
+"uniform sampler2D hairShadowMap;\n"
+"uniform vec3 viewPos;\n"
+"uniform vec3 lightPos;\n"
+"uniform vec3 _MainColor;\n"
+"uniform vec3 _ShadowColor;\n"
+"uniform float _ShadowRange;\n"
+"uniform float _ShadowSmooth;\n"
+"uniform vec3 _SpecularColor;\n"
+"uniform float _SpecularRange;\n"
+"uniform float _SpecularMulti;\n"
+"uniform float _SpecularGloss;\n"
+"uniform vec3 _LightColor0;\n"
+"uniform vec3 _FresnelColor;\n"
+"uniform float _FresnelEff;\n"
+"uniform float _HairShadowDistance;\n"
+"uniform bool _isFace;\n"
+"uniform bool _isHair;\n"
+"vec3 fresnelSchlick(float cosTheta, vec3 F0) {\n"
+"   return F0 +(1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);\n"
+"}\n"
+"void main() {\n"
+"   vec3 diffuseTex = texture(texture_diffuse1, TexCoords).rgb;\n"
+"   vec3 ilmTex = texture(ilmTexture, TexCoords).rgb;\n"
+"   vec3 normal = normalize(Normal);\n"
+"   vec3 lightDir = normalize(lightPos - FragPos);\n"
+"   vec3 viewDir = normalize(viewPos - FragPos);\n"
+"   vec3 halfDir = normalize(lightDir + viewDir);\n"
+"   float NdotH = max(dot(normal, halfDir), 0.0);\n"
+"   float halfLambert = dot(normal, lightDir) * 0.5 + 0.5;\n"
+"   float threshold = (halfLambert + ilmTex.g) * 0.5;\n"
+"   float ramp = smoothstep(0, _ShadowSmooth, _ShadowRange - halfLambert);\n"
+"   vec3 diffuse = mix(_ShadowColor, _MainColor, ramp);\n"
+"   diffuse *= diffuseTex;\n"
+"   vec3 specular = vec3(0.0);\n"
+"   float specularSize = pow(NdotH, _SpecularGloss);\n"
+"   float specularMark = ilmTex.b;\n"
+"   if (specularSize >= 1 - specularMark * _SpecularRange) {\n"
+"       specular = _SpecularMulti * ilmTex.r * _SpecularColor;\n"
+"   }\n"
+"   vec3 fresnel = _FresnelEff * fresnelSchlick(max(dot(viewDir, halfDir), 0.0), vec3(0.04));\n"
+"   vec3 color = _LightColor0 * (diffuse + specular) + fresnel * _FresnelColor;\n"
+//"   if (_isFace) {\n"
+//"       vec2 scrPos = vec2(gl_FragCoord.x / 640.0, gl_FragCoord.y / 640.0);\n"
+////"       vec2 scrPos = vec2(position.x / position.w, position.y / position.w);\n"
+//"       vec3 gaga = normalize(viewLight);\n"
+//"       float depth = (position.z / position.w) * 0.5 + 0.5;\n"
+////"       vec2 samplingPoint = scrPos + _HairShadowDistance * gaga.xy * vec2(1.0/640.0, 1.0/640.0);\n"
+//"       vec2 samplingPoint = scrPos + _HairShadowDistance * gaga.xy;\n"
+//"       float hairShadow = texture(hairShadowMap, samplingPoint).r;\n"
+//"       float inshadow = depth < hairShadow+0.0001 ? 0 : 1;\n"
+//"       color *= inshadow;\n"
+////"       if (hairShadow == 0.0) color = vec3(0, 0, 1.0);\n"
+////"       if (hairShadow == 1.0) color = vec3(0, 1.0, 0);\n"
+//"       if (depth < hairShadow) color = vec3(0, 1.0, 0);\n"
+//"   }\n"
+"   FragColor = vec4(color, 1.0);\n"
+//"   float hairShadow = 1 - texture(hairShadowMap,vec2(0.0, 0.0)).r;\n"
+//"   if (hairShadow == 0.0) FragColor = vec4(1.0,0,0,1.0);\n"
+"}\n";
+
+const string hairShadowStencilVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"layout(location = 1) in vec3 aNormal;\n"
+"layout(location = 2) in vec2 aTexCoords;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"uniform vec3 aLightPos;\n"
+"uniform float _Offset;\n"
+"void main() {\n"
+"   vec3 FragPos = vec3(model * vec4(aPos, 1.0));\n"
+"   vec3 lightDir = normalize(aLightPos - FragPos);\n"
+"   vec4 position = projection * view * model * vec4(aPos, 1.0);\n"
+"   vec2 lightOffset = normalize(vec2(view * vec4(aLightPos, 1.0)));\n"
+"   position.xy += lightOffset * _Offset;\n"
+"   gl_Position = position;\n"
+"}\n";
+
+const string hairShadowStencilFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"uniform vec3 _ShadowColor;\n"
+"void main() {\n"
+"   FragColor = vec4(_ShadowColor, 1.0);\n"
+"}\n";
+
 NPRShader::NPRShader() {
     model = new Model("..\\models\\hotaru\\hotaru.obj", "hotaru");
     bodyLightMap = loadTexture("..\\models\\hotaru\\Texture\\Avatar_Girl_Sword_PlayerGirl_Tex_Body_Lightmap.png");
@@ -438,7 +627,8 @@ NPRShader::NPRShader() {
     shader.setUniform("_FresnelColor", vec3(0.3, 0, 0));
     mat4 model(1.0);
     model = glm::translate(model, vec3(0.0));
-    model = glm::scale(model, vec3(0.2));
+    model = glm::scale(model, vec3(0.1));
+    //model = glm::rotate(model, glm::radians(180.0f), vec3(0,1,0));
     shader.setUniform("model", model);
 
     // 略微放大模型，存入缓冲
@@ -450,24 +640,169 @@ NPRShader::NPRShader() {
     colorBufferShader.setUniform("outlineColor", vec3(0.4));
     // 应该放入绘图函数中，为了简便暂不放入
     colorBufferShader.setUniform("aspect", 1.0);
+
+    //hairShadowShader.init("hair_shadow_shader", hairShadowVertexShader, hairShadowFragShader);
+    //hairShadowShader.bind();
+    //hairShadowShader.setUniform("model", model);
+    //hairShadowShader.setUniform("aLightPos", lightPos);
+    //hairShadowShader.setUniform("_ShadowColor", vec3(1.0));
+    //hairShadowShader.setUniform("_Offset", 1.0);
+
+    testhairShader.init("hair_shadow", testhairShadowVertexShader, testhairShadowFragShader);
+    testhairShader.bind();
+    testhairShader.setUniform("model", model);
+
+    lastFaceShader.init("hair_draw_shadow", faceVertexShader, faceFragShader);
+    lastFaceShader.bind();
+    lastFaceShader.setUniform("model", model);
+    lastFaceShader.setUniform("lightPos", lightPos);
+    lastFaceShader.setUniform("aLightPos", lightPos);
+    lastFaceShader.setUniform("ilmTexture", 10);
+    lastFaceShader.setUniform("sdfMap", 11);
+    lastFaceShader.setUniform("hairLightTexture", 12);
+    lastFaceShader.setUniform("hairShadowMap", 8);
+    lastFaceShader.setUniform("_MainColor", vec3(1.0));
+    lastFaceShader.setUniform("_ShadowColor", vec3(0.7, 0.7, 0.8));
+    lastFaceShader.setUniform("_ShadowRange", 0.5);
+    lastFaceShader.setUniform("_ShadowSmooth", 0.2);
+    //shader.setUniform("_LightColor0", vec3(1.0, 0.792, 0.749));
+    lastFaceShader.setUniform("_LightColor0", vec3(1.0));
+    lastFaceShader.setUniform("_SpecularColor", vec3(1.0));
+    lastFaceShader.setUniform("_SpecularRange", 0.7);
+    lastFaceShader.setUniform("_SpecularMulti", 0.3);
+    lastFaceShader.setUniform("_SpecularGloss", 16.0);
+    lastFaceShader.setUniform("_FresnelEff", 0.8);
+    lastFaceShader.setUniform("_FresnelColor", vec3(0.3, 0, 0));
+    lastFaceShader.setUniform("_HairShadowDistance", 0.0);
+
+    hairShadowStencilShader.init("hair_shadow_by_stencil", hairShadowStencilVertexShader, hairShadowStencilFragShader);
+    hairShadowStencilShader.bind();
+    hairShadowStencilShader.setUniform("model", model);
+    hairShadowStencilShader.setUniform("_ShadowColor", vec3(0.5, 0.0, 0.0));
+    hairShadowStencilShader.setUniform("_Offset", 0.005);
+
+    // 对面部进行模板缓冲，方便绘制阴影
+    glEnable(GL_STENCIL_TEST);
+    //glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+    glStencilOp(GL_ZERO, GL_ZERO, GL_REPLACE);
+
+    // 思路：首先确定是不是要画脸，如果是的话写入模板值，不是的话跳过。等到所有mesh都被绘制完后再绘制一次头发（相当于绘制两遍），并且对头发进行偏移和深度测试。
+
+    //glGenFramebuffers(1, &fbo);
+    //glGenRenderbuffers(1, &captureRBO);
+    //glGenTextures(1, &tbo);
 }
 
 void NPRShader::draw(const mat4& view, const mat4& projection, const vec3& viewPos) {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    shader.bind();
-    shader.setUniform("view", view);
-    shader.setUniform("projection", projection);
-    shader.setUniform("viewPos", viewPos);
-    glm::vec3 newPos = lightPos + glm::vec3(sin(glfwGetTime() * 0.4) * 10.0, 0.0, 0.0);
-    shader.setUniform("lightPos", newPos);
-    model->draw(shader);
+    glEnable(GL_STENCIL_TEST);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+    //glStencilOp(GL_ZERO, GL_ZERO, GL_REPLACE);
+    //shader.bind();
+    //shader.setUniform("view", view);
+    //shader.setUniform("projection", projection);
+    //shader.setUniform("viewPos", viewPos);
+    //glm::vec3 newPos = lightPos + glm::vec3(sin(glfwGetTime() * 0.4) * 10.0, 0.0, 0.0);
+    ////shader.setUniform("lightPos", newPos);
+    //model->draw(shader);
 
-    glEnable(GL_CULL_FACE); // 开启面剔除
-    glCullFace(GL_FRONT); // 正面剔除
-    colorBufferShader.bind();
-    colorBufferShader.setUniform("view", view);
-    colorBufferShader.setUniform("projection", projection);
-    model->draw(colorBufferShader);
+    //glEnable(GL_CULL_FACE); // 开启面剔除
+    //glCullFace(GL_FRONT); // 正面剔除
+    //colorBufferShader.bind();
+    //colorBufferShader.setUniform("view", view);
+    //colorBufferShader.setUniform("projection", projection);
+    //model->draw(colorBufferShader);
+    //glDisable(GL_CULL_FACE);
+
+    // 最后再绘制一遍头发阴影
+    //hairShadowShader.bind();
+    //hairShadowShader.setUniform("view", view);
+    //hairShadowShader.setUniform("projection", projection);
+    ////hairShadowShader.setUniform("aLightPos", newPos);
+    //model->drawHairShadow(hairShadowShader);
+
+    // 帧缓冲
+    //glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    //glActiveTexture(GL_TEXTURE8);
+    //glBindTexture(GL_TEXTURE_2D, tbo);
+    //glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16F, 640, 640, 0, GL_RG, GL_FLOAT, 0);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+    //glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 640, 640);
+    //glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tbo, 0);
+    //glViewport(0, 0, 640, 640);
+    //glScissor(0, 0, 640, 640);
+    //glClearColor(1.0, 1.0, 1.0, 1.0);
+    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //testhairShader.bind();
+    //testhairShader.setUniform("view", view);
+    //testhairShader.setUniform("projection", projection);
+    //model->drawHairShadow(testhairShader);
+    //glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // 模板测试，先写入脸的模板值, 然后正常绘制
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    lastFaceShader.bind();
+    lastFaceShader.setUniform("view", view);
+    lastFaceShader.setUniform("projection", projection);
+    lastFaceShader.setUniform("viewPos", viewPos);
+    glm::vec3 newPos = lightPos + glm::vec3(sin(glfwGetTime() * 0.4) * 10.0, 0.0, 0.0);
+    lastFaceShader.setUniform("lightPos", newPos);
+    lastFaceShader.setUniform("aLightPos", newPos);
+    model->drawFaceStencil(lastFaceShader);
+    // 然后画头发的阴影，如果模板值正确就画上脸
+    hairShadowStencilShader.bind();
+    hairShadowStencilShader.setUniform("view", view);
+    hairShadowStencilShader.setUniform("projection", projection);
+    //glm::vec3 newPos = lightPos + glm::vec3(sin(glfwGetTime() * 0.4) * 10.0, 0.0, 0.0);
+    hairShadowStencilShader.setUniform("aLightPos", newPos);
+    model->drawHairShadowStencil(hairShadowStencilShader);
+    //glActiveTexture(GL_TEXTURE0);
+    //glBindTexture(GL_TEXTURE_2D, 0);
+    //glViewport(405, 115, 640, 640);
+    //glScissor(405, 115, 640, 640);
+    //glClearColor(0.4, 0.4, 0.4, 1.0);
+    //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //lastFaceShader.bind();
+    //lastFaceShader.setUniform("view", view);
+    //lastFaceShader.setUniform("projection", projection);
+    //lastFaceShader.setUniform("viewPos", viewPos);
+    //glm::vec3 newPos = lightPos + glm::vec3(sin(glfwGetTime() * 0.4) * 10.0, 0.0, 0.0);
+    //lastFaceShader.setUniform("lightPos", newPos);
+    //lastFaceShader.setUniform("aLightPos", newPos);
+    //model->draw(lastFaceShader);
+    //quadShader.bind();
+    //quadShader.setUniform("shadowmap", 8);
+    //renderQuad();
+}
+
+void NPRShader::renderQuad()
+{
+    if (quadVAO == 0)
+    {
+        float quadVertices[] = {
+            // positions        // texture Coords
+            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+             1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+        };
+        // setup plane VAO
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    }
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
 }
 
 unsigned int NPRShader::loadTexture(char const* path)

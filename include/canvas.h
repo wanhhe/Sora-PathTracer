@@ -34,14 +34,14 @@ public:
     Light* firstLight();
     Model* firstModel();
     void preloadPbrMapBalls();
-    void preloadKlaudiaValentz();
     void preloadDiffuseIrradiance();
     void preloadPBRBalls();
     void preloadIBLMapBalls();
     void preloadShadowMapping();
     void preloadPCSS();
-    void preloadSDF();
+    void preloadSDFShadow();
     void preloadNPR();
+    void preloadRayMarching();
     void generateShadowMap();
     void renderShadowScene(nanogui::GLShader& shader);
 
@@ -64,7 +64,7 @@ private:
     int untitleLight;
     bool init;
 
-    //NPRShader nprShader;
+    NPRShader nprShader;
 
     unsigned int loadTexture(char const* path);
     void renderSphere();

@@ -20,6 +20,26 @@ void Model::draw(nanogui::GLShader& shader) {
 	}
 }
 
+void Model::drawHairShadow(nanogui::GLShader& shader) {
+	for (int i = 0; i < meshes.size(); i++) {
+		meshes[i].drawHairShadow(shader);
+	}
+}
+
+void Model::drawFaceStencil(nanogui::GLShader& shader) {
+	for (int i = 0; i < meshes.size(); i++) {
+		meshes[i].drawFaceStencil(shader);
+	}
+}
+
+void Model::drawHairShadowStencil(nanogui::GLShader& shader) {
+	for (int i = 0; i < meshes.size(); i++) {
+		if (meshes[i].isHair) {
+			meshes[i].drawHairShadowStencil(shader);
+		}
+	}
+}
+
 void Model::loadModel(const string& path) {
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
@@ -54,7 +74,28 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 	vector<Vertex> vertices;
 	vector<unsigned int> indices;
 	vector<Texture> textures;
-
+	bool isFace = false;
+	bool isHair = false;
+	std::cout << "s " << mesh->mName.C_Str() << std::endl;
+	for (int i = 0; i < 9; i++) {
+		string name = "m" + std::to_string(i);
+		//std::cout << name << std::endl;
+		if (mesh->mName.C_Str() == name + ".004") {
+			//std::cout << "gaga face " << i << std::endl;
+			isFace = true;
+			break;
+		}
+	}
+	if (!strcmp(mesh->mName.C_Str(), "hotaru")) {
+		isFace = true;
+		std::cout << "laina sfasdfsfasdfssdfdsaa" << std::endl;
+	} else {
+		std::cout << mesh->mName.C_Str() << std::endl;
+	}
+	string name = "m";
+	if (mesh->mName.C_Str() == name + "9.004") isHair = true;
+	//if (mesh->mName.C_Str() == name + "9.004") isHair = true;
+	
 	for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
 		Vertex vertex;
 		vertex.position.x = mesh->mVertices[i].x;
@@ -97,15 +138,15 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 		vector<Texture> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
 		textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
 		vector<Texture> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
-		if (specularMaps.size() > 0) std::cout << "loading!" << std::endl;
+		//if (specularMaps.size() > 0) std::cout << "loading!" << std::endl;
 		textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
 		vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
 		textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
 		vector<Texture> emissionMaps = loadMaterialTextures(material, aiTextureType_EMISSIVE, "texture_emission");
-		if (emissionMaps.size() > 0) std::cout << "load" << std::endl;
+		//if (emissionMaps.size() > 0) std::cout << "load" << std::endl;
 		textures.insert(textures.end(), emissionMaps.begin(), emissionMaps.end());
 	}
-	return Mesh(vertices, indices, textures);
+	return Mesh(vertices, indices, textures, isFace, isHair);
 }
 
 vector<Texture> Model::loadMaterialTextures(aiMaterial* _material, aiTextureType type, const string& typeName) {

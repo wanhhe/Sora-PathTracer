@@ -26,12 +26,18 @@ public:
 	vector<Vertex> vertices;
 	vector<unsigned int> indices;
 	vector<Texture> textures;
+	bool isFace;
+	bool isHair;
 
-	Mesh(vector<Vertex> _vertices, vector<unsigned int> _indices, vector<Texture> _textures);
+	Mesh(vector<Vertex> _vertices, vector<unsigned int> _indices, vector<Texture> _textures, bool _isFace, bool _isHair);
 	void draw(nanogui::GLShader shader);
-	
+	void drawHairShadow(nanogui::GLShader shader);
+	void drawFaceStencil(nanogui::GLShader& shader);
+	void drawHairShadowStencil(nanogui::GLShader& shader);
+
 private:
 	unsigned int VAO, VBO, EBO;
+
 	void setupMesh();
 };
 

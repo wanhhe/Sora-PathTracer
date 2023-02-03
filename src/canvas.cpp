@@ -1212,6 +1212,174 @@ const string prefilterFragShader =
 "   FragColor = vec4(prefilteredColor, 1.0);\n"
 "}\n";
 
+const string sdfVertexShader =
+"#version 330 core\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"void main() {\n"
+"   "
+"}\n";
+
+const string sdfFragShader =
+"#version 330 core\n"
+"out vec4 FragColor;\n"
+"void main() {\n"
+"   "
+"}\n";
+
+const string raymarchingVertexShader =
+"#version 330 core\n"
+"layout(location = 0) in vec3 aPos;\n"
+"layout(location = 1) in vec3 aNormal;\n"
+"layout(location = 2) in vec3 aTexCoords;\n"
+"out mat4 modelmat;\n"
+"out mat4 viewmat;\n"
+"out mat4 projectionmat;\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"void main() {\n"
+"   modelmat = model;\n"
+"   viewmat = view;\n"
+"   projectionmat = projection;\n"
+"   gl_Position = projection * view * model * vec4(aPos, 1.0);\n"
+"}\n";
+
+//const string raymarchingFragShader =
+//"#version 330 core\n"
+//"out vec4 FragColor;\n"
+//"in mat4 modelmat;\n"
+//"in mat4 viewmat;\n"
+//"in mat4 projectionmat;\n"
+//"uniform vec2 viewPort;\n"
+//"uniform vec3 viewPos;\n"
+//"uniform vec3 lightPos;\n"
+//"#define MAXSTEP 40\n"
+//"#define TOLERANCE 0.0001\n"
+//"#define NORMALESP 0.001\n"
+//"vec2 coord2uv(vec2 coord) {\n"
+//"   return 2.0 * coord / viewPort - 1.0;\n"
+//"}\n"
+//"vec3 uv2ray(vec2 uv) {\n"
+//"   vec4 camdir = inverse(projectionmat) * vec4(uv, 1.0, 1.0);\n"
+//"   camdir = camdir / camdir.w;\n"
+////"   vec3 dir = mat3(gl_ModelViewMatrixInverse) * vec3(camdir);\n"
+//"   vec3 dir = mat3(inverse(viewmat * modelmat)) * vec3(camdir);\n"
+//"   return normalize(dir);\n"
+//"}\n"
+//"vec3 eyePos() {\n"
+////"   return vec3(gl_ModelViewMatrixInverse * vec4(0,0,0,1.0));\n"
+//"   return vec3(inverse(viewmat * modelmat) * vec4(viewPos,1.0));\n"
+////"   return viewPos;\n"
+//"}\n"
+//"vec3 lightPosition() {\n"
+////"   return normalize(mat3(gl_ModelViewMatrixInverse) * lightPos);\n"
+//"   return normalize(mat3(inverse(viewmat * modelmat)) * lightPos);\n"
+////"   return lightPos;\n"
+//"}\n"
+//"vec3 spotLightPos() {\n"
+////"   return vec3(gl_ModelViewMatrixInverse * lightPos);\n"
+//"   return vec3(inverse(viewmat * modelmat) * vec4(lightPos, 1.0));\n"
+//"}\n"
+//"float sdsphere(vec3 pos, float r) {\n"
+//"   return length(pos) - r;\n"
+//"}\n"
+//"vec2 map(vec3 pos) {\n"
+//"   return vec2(sdsphere(pos, 1.0), 0.5);\n"
+//"}\n"
+//"bool marching(vec3 pos, vec3 ray, out vec3 closeing, out float material) {\n"
+//"   int step = 0;\n"
+//"   float mindist = 1;\n"
+//"   vec2 res;\n"
+//"   do {\n"
+//"       res = map(pos);\n"
+//"       if (res.x <mindist) {\n"
+//"           mindist = res.x;\n"
+//"           material = res.y;\n"
+//"           closeing = pos;\n"
+//"       }\n"
+//"       pos += ray * res.x;\n"
+//"       step++;\n"
+//"   } while(res.x > TOLERANCE && step <= MAXSTEP);\n"
+//"   return step <= MAXSTEP;\n"
+//"}\n"
+//"float procDepth(vec3 localPos) {\n"
+////"   vec3 frag = gl_ModelViewProjectionMatrix * vec4(localPos, 1.0);\n"
+//"   vec4 frag = projectionmat * viewmat * modelmat * vec4(localPos, 1.0);\n"
+//"   frag /= frag.w;\n"
+//"   return (frag.z + 1.0) / 2.0;\n"
+//"}\n"
+//"vec3 lightModel(vec3 eye, vec3 normal, vec3 light, float material) {\n"
+//"   float NL = max(dot(normal, light), 0.0);\n"
+//"   float RL = max(dot(eye, reflect(light, normal)), 0.0);\n"
+//"   return vec3(material * 0.2) + vec3(material) * NL + vec3(material) * pow(RL, 5);\n"
+//"}\n"
+//"vec3 procNormal(vec3 marchpt) {\n"
+//"   float dist = map(marchpt).x;\n"
+//"   return normalize(vec3(dist-map(marchpt-vec3(NORMALESP,0,0)).x, dist-map(marchpt-vec3(0,NORMALESP,0)).x, dist-map(marchpt-vec3(0,0,NORMALESP)).x));\n"
+//"}\n"
+//"void main() {\n"
+//"   vec2 uv = coord2uv(gl_FragCoord.xy);\n"
+//"   vec3 ro = eyePos();\n"
+//"   vec3 rd = uv2ray(uv);\n"
+//"   vec3 nearest;\n"
+//"   float material;\n"
+//"   if (marching(ro, rd, nearest, material)) {\n"
+//"       vec3 normal = procNormal(nearest);\n"
+//"       gl_FragDepth = procDepth(nearest);\n"
+//"       FragColor = vec4(lightModel(rd, normal, lightPosition(), material) * normal, 1.0);"
+//"   } else {\n"
+//"       discard;\n"
+//"   }\n"
+//"}\n";
+
+const string raymarchingFragShader =
+"uniform mat vWorldToScreen;"
+"float GetDepth(vec3 posWorld) {\n"
+"    float depth = (vWorldToScreen * vec4(posWorld, 1.0)).w;\n"
+"    return depth;\n"
+"}\n"
+"float GetGBufferDepth(vec2 uv) {\n"
+"    float depth = texture2D(uGDepth, uv).x;\n"
+"    if (depth < 1e-2) {\n"
+"        depth = 1000.0;\n"
+"    }\n"
+"    return depth;\n"
+"}\n"
+"vec4 Project(vec4 a) {\n"
+"    return a / a.w;\n"
+"}\n"
+"vec2 GetScreenCoordinate(vec3 posWorld) {\n"
+"    vec2 uv = Project(vWorldToScreen * vec4(posWorld, 1.0)).xy * 0.5 + 0.5;\n"
+"    return uv;\n"
+"}\n"
+"bool RayMarch(vec3 ori, vec3 dir, out vec3 hitPos) {\n"
+"    float step = 0.05;\n"
+"    vec3 endPoint = ori;\n"
+"    for (int i = 0; i < 40; i++) {\n"
+"        vec3 testPoint = endPoint + step * dir;\n"
+"        float testDepth = GetDepth(testPoint);\n"
+"        float bufferDepth = GetGBufferDepth(GetScreenCoordinate(testPoint));\n"
+"        if (step > 40.0) {\n"
+"            return false;\n"
+"        }\n"
+"        else if (testDepth - bufferDepth > 1e-6) {\n"
+"            hitPos = testPoint;\n"
+"            return true;\n"
+"        }\n"
+"        else if (testDepth < bufferDepth) {\n"
+"            endPoint = testPoint;\n"
+"        } else if (testDepth > bufferDepth) {\n"
+"        }\n"
+"    }\n"
+"    return false;\n"
+"}\n"
+"void main() {\n"
+"}\n";
+
+
+
 glm::vec3 lightPositions[] = {
     glm::vec3(-10.0f,  10.0f, 10.0f),
     glm::vec3(10.0f,  10.0f, 10.0f),
@@ -1226,7 +1394,7 @@ glm::vec3 lightColors[] = {
 };
 
 MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) : 
-    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(PBR_MAP), init(false), shaderStyle(NPR) {
+    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(PRELOAD_NONE), init(false), shaderStyle(NPR) {
     using namespace nanogui;
 
     //modelList.emplace_back(new Model("..\\models\\sara\\sara.obj", "Model 1"));
@@ -1353,8 +1521,9 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     GLShader debugShadowShader;
     debugShadowShader.init("debug_shadow_shader", shadowDebugVertexShader, shadowDebugFragShader);
     debugShadowShader.bind();
-    debugShadowShader.setUniform("near_plane", near_plane);
-    debugShadowShader.setUniform("far_plane", far_plane);
+    // 消去输出，需要再加
+    //debugShadowShader.setUniform("near_plane", near_plane);
+    //debugShadowShader.setUniform("far_plane", far_plane);
     debugShadowShader.setUniform("depthMap", 0);
     shaderList.emplace_back(debugShadowShader);
 
@@ -1384,6 +1553,7 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     //pbrShader.init("pbr_shader", PBRVertexShader, PBRFragShader);
     shaderList.emplace_back(pbrShader);
 
+    // 18
     GLShader pbrmapShader;
     pbrmapShader.initFromFiles("pbr_map_shader", "vertex.txt", "pbrmap_fs.txt");
     shaderList.emplace_back(pbrmapShader);
@@ -1475,7 +1645,7 @@ void MyGLCanvas::drawGL() {
             updateCamera();
             view = lookAt(camera->position, camera->target, camera->up);
             projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
-            //nprShader.draw(view, projection, camera->position);
+            nprShader.draw(view, projection, camera->position);
         }
         else {
             if (modelList.size() == 0) return;
@@ -1532,9 +1702,6 @@ void MyGLCanvas::drawGL() {
         glDepthFunc(GL_LEQUAL);
         preloadDiffuseIrradiance();
     }
-    else if (preload == KLUDIAVALENTZ) {
-        preloadKlaudiaValentz();
-    }
     else if (preload == SHADOWMAPPING) {
         glEnable(GL_DEPTH_TEST);
         preloadShadowMapping();
@@ -1554,6 +1721,10 @@ void MyGLCanvas::drawGL() {
         glDepthFunc(GL_LEQUAL);
         glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
         preloadIBLMapBalls();
+    }
+    else if (preload == RAY_MARCHING) {
+        glEnable(GL_DEPTH_TEST);
+        preloadRayMarching();
     }
 }
 
@@ -1638,8 +1809,14 @@ void MyGLCanvas::preloadNPR() {
 
 }
 
-void MyGLCanvas::preloadSDF() {
+void MyGLCanvas::preloadRayMarching() {
+}
 
+void MyGLCanvas::preloadSDFShadow() {
+    if (!init) {
+
+        init = true;
+    }
 }
 
 const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
@@ -2778,15 +2955,6 @@ void MyGLCanvas::preloadIBLMapBalls() {
     // render BRDF map to screen
         //shaderList[16].bind();
         //renderQuad();
-}
-
-unsigned int klaudiaVAO = 0;
-void MyGLCanvas::preloadKlaudiaValentz() {
-    string id = addModel("..\\models\\KlaudiaValentz\\KlaudiaValentz.obj", "Klaudia");
-    Model* model = modelList[0];
-    model->shaderIndex = 4;
-    model->translate = vec3(0.0);
-    loadTexture("..\\models\\KlaudiaValentz\\RaycastEffects\\Boyd\\");
 }
 
 unsigned int sphereVAO = 0;

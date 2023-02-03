@@ -11,6 +11,9 @@ class Model {
 public:
 	Model(const string& path, const string& _name);
 	void draw(nanogui::GLShader& shader);
+	void drawHairShadow(nanogui::GLShader& shader);
+	void drawFaceStencil(nanogui::GLShader& shader);
+	void drawHairShadowStencil(nanogui::GLShader& shader);
 
 	vec3 translate;
 	vec3 scale;

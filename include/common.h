@@ -83,11 +83,12 @@ enum PreLoadEnum {
     PRELOAD_NONE = 0,
     PBRMAPBALLS,
     DIFFUSEIRRADIANCE,
-    KLUDIAVALENTZ,
     SHADOWMAPPING,
     PCSS,
     PBR,
-    PBR_MAP
+    PBR_MAP,
+    SDF_SHADOW,
+    RAY_MARCHING
 };
 
 enum ShaderStyleEnum {
