@@ -34,14 +34,12 @@ public:
     Light* firstLight();
     Model* firstModel();
     void preloadPbrMapBalls();
-    void preloadDiffuseIrradiance();
-    void preloadPBRBalls();
+    void preloadDiffuseIBL();
+    void preloadIBLBalls();
     void preloadIBLMapBalls();
     void preloadShadowMapping();
     void preloadPCSS();
-    void preloadSDFShadow();
     void preloadNPR();
-    void preloadRayMarching();
     void generateShadowMap();
     void renderShadowScene(nanogui::GLShader& shader);
 
@@ -53,7 +51,6 @@ public:
 private:
     vector<nanogui::GLShader> shaderList;
     vector<nanogui::GLShader> lightShaderList;
-    nanogui::GLShader lightShader;
     mat4 model;
     mat4 view;
     mat4 projection;

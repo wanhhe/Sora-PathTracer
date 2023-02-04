@@ -12,13 +12,15 @@ public:
 private:
 	Model* model;
 	nanogui::GLShader shader;
-	nanogui::GLShader colorBufferShader;
-	nanogui::GLShader hairShadowShader;
+	nanogui::GLShader shader2;
+	nanogui::GLShader shader3;
+	nanogui::GLShader shader4;
+	nanogui::GLShader outlineShader;
 	nanogui::GLShader testhairShader;
 	nanogui::GLShader testotherShader;
 	nanogui::GLShader lastFaceShader;
-	nanogui::GLShader hairShadowStencilShader;
-	nanogui::GLShader faceHairShadowShader;
+	nanogui::GLShader bangsShadowStencilShader;
+	nanogui::GLShader bangsShadowShader;
 	unsigned int bodyLightMap;
 	unsigned int hairLightMap;
 	unsigned int hairSpecularMap;

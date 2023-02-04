@@ -6,7 +6,7 @@
 
 Model::Model(const string& path, const string& _name) {
 	loadModel(path);
-	shaderIndex = 11;
+	shaderIndex = 0;
 	translate = vec3(0.f);
 	scale = vec3(1.f);
 	name = _name;

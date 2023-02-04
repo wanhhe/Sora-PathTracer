@@ -253,1132 +253,6 @@ const string mapFragShader =
 "   FragColor = vec4(ambient + diffuse + specular + emission, 1.0f);\n"
 "}\n";
 
-const string cookTorranceVertexShader =
-"#version 330 core\n"
-"layout(location = 0) in vec3 aPos;\n"
-"layout(location = 1) in vec3 aNormal;\n"
-"layout(location = 2) in vec2 aTexCoords;\n"
-"out vec2 TexCoords;\n"
-"out vec3 WorldPos;\n"
-"out vec3 Normal;\n"
-"uniform mat4 model;\n"
-"uniform mat4 view;\n"
-"uniform mat4 projection;\n"
-"void main() {\n"
-"   TexCoords = aTexCoords;\n"
-"   WorldPos = vec3(model * vec4(aPos, 1.0));\n"
-"   Normal = mat3(model) * aNormal;\n"
-"   gl_Position = projection * view * vec4(WorldPos, 1.0);\n"
-"}\n";
-
-const string cookTorranceFragShader =
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec2 TexCoords;\n"
-"in vec3 WorldPos;\n"
-"in vec3 Normal;\n"
-"uniform vec3 viewPos;\n"
-"uniform vec3 albedo;\n"
-"uniform float metallic;\n"
-"uniform float roughness;\n"
-"uniform float ao;\n"
-"uniform vec3 lightPosition[4];\n"
-"uniform vec3 lightColors[4];\n"
-"const float PI = 3.14159265359;\n"
-"vec3 fresnelSchlick(float cosTheta, vec3 F0) {\n"
-"   return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);"
-"}\n"
-"float DistributionGGX(vec3 N, vec3 H, float roughness) {\n"
-"   float a = roughness * roughness;\n"
-"   float a2 = a * a;\n"
-"   float NdotH = max(dot(N, H), 0.0);\n"
-"   float NdotH2 = NdotH * NdotH;\n"
-"   float nom = a2;\n"
-"   float denom = (NdotH2 * (a2 - 1.0) + 1.0);\n"
-"   denom = PI * denom * denom;\n"
-"   return nom / denom;\n"
-"}\n"
-"float GeometrySchlickGGX(float NdotV, float roughness) {\n"
-"   float r = (roughness + 1.0);\n"
-"   float k = (r * r) / 8.0;\n"
-"   float nom = NdotV;\n"
-"   float denom = NdotV * (1.0 - k) + k;\n"
-"   return nom / denom;\n"
-"}\n"
-"float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {\n"
-"   float NdotV = max(dot(N, V), 0.0);\n"
-"   float NdotL = max(dot(N, L), 0.0);\n"
-"   float ggx2 = GeometrySchlickGGX(NdotV, roughness);\n"
-"   float ggx1 = GeometrySchlickGGX(NdotL, roughness);\n"
-"   return ggx1 * ggx2;\n"
-"}\n"
-"void main() {\n"
-"   vec3 N = normalize(Normal);\n"
-"   vec3 V = normalize(viewPos - WorldPos);\n"
-"   vec3 F0 = vec3(0.04);\n"
-"   F0 = mix(F0, albedo, metallic);\n"
-"   vec3 Lo = vec3(0.0);\n"
-"   for (int i = 0; i < 4; i++) {\n"
-"       vec3 L = normalize(lightPosition[i] - WorldPos);\n"
-"       vec3 H = normalize(L + V);\n"
-"       float distance = length(lightPosition[i] - WorldPos);\n"
-"       float attenuation = 1.0 / (distance * distance);\n"
-"       vec3 radiance = lightColors[i] * attenuation;\n"
-"       vec3 F = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), F0);\n"
-"       float G = GeometrySmith(N, V, L, roughness);\n"
-"       float NDF = DistributionGGX(N, H, roughness);\n"
-"       vec3 numerator = NDF * G * F;\n"
-"       float NdotL = max(dot(N, L), 0.0);\n"
-"       float denominator = 4.0 * max(dot(N, V), 0.0) * NdotL + 0.0001;\n"
-"       vec3 specular = numerator / denominator;\n"
-"       vec3 Ks = F;\n"
-"       vec3 Kd = vec3(1.0) - Ks;\n"
-"       Kd *= 1.0 - metallic;\n"
-"       Lo += (Kd * albedo / PI + specular) * radiance * NdotL;\n"
-"   }\n"
-"   vec3 ambient = vec3(0.03) * albedo * ao;\n"
-"   vec3 color = ambient + Lo;\n"
-"   color = color / (color + vec3(1.0));\n"
-"   color = pow(color, vec3(1.0 / 2.2));\n"
-"   FragColor = vec4(color, 1.0);\n"
-"}\n";
-
-const string pbrMapVertexShader =
-"#version 330 core\n"
-"layout(location = 0) in vec3 aPos;\n"
-"layout(location = 1) in vec3 aNormal;\n"
-"layout(location = 2) in vec2 aTexCoords;\n"
-"out vec2 TexCoords;\n"
-"out vec3 WorldPos;\n"
-"out vec3 Normal;\n"
-"uniform mat4 model;\n"
-"uniform mat4 view;\n"
-"uniform mat4 projection;\n"
-"void main() {\n"
-"   TexCoords = aTexCoords;\n"
-"   WorldPos = vec3(model * vec4(aPos, 1.0));\n"
-"   Normal = mat3(model) * aNormal;\n"
-"   gl_Position = projection * view * vec4(WorldPos, 1.0);\n"
-"}\n";
-
-const string pbrMapFragShader =
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec2 TexCoords;\n"
-"in vec3 WorldPos;\n"
-"in vec3 Normal;\n"
-"uniform vec3 viewPos;\n"
-"uniform sampler2D albedoMap;\n"
-"uniform sampler2D normalMap;\n"
-"uniform sampler2D metallicMap;\n"
-"uniform sampler2D roughnessMap;\n"
-"uniform sampler2D aoMap;\n"
-"uniform vec3 lightPosition[4];\n"
-"uniform vec3 lightColors[4];\n"
-"const float PI = 3.14159265359;\n"
-"vec3 getNormalFromMap() {\n"
-"   vec3 tangentNormal = texture(normalMap, TexCoords).xyz * 2.0 - 1.0;\n"
-"   vec3 Q1 = dFdx(WorldPos);\n"
-"   vec3 Q2 = dFdy(WorldPos);\n"
-"   vec2 st1 = dFdx(TexCoords);\n"
-"   vec2 st2 = dFdy(TexCoords);\n"
-"   vec3 N = normalize(Normal);\n"
-"   vec3 T = normalize(Q1 * st2.t - Q2 * st1.t);\n"
-"   vec3 B = -normalize(cross(N, T));\n"
-"   mat3 TBN = mat3(T, B, N);\n"
-"   return normalize(TBN * tangentNormal);\n"
-"}\n"
-"vec3 fresnelSchlick(float cosTheta, vec3 F0) {\n"
-"   return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);"
-"}\n"
-"float DistributionGGX(vec3 N, vec3 H, float roughness) {\n"
-"   float a = roughness * roughness;\n"
-"   float a2 = a * a;\n"
-"   float NdotH = max(dot(N, H), 0.0);\n"
-"   float NdotH2 = NdotH * NdotH;\n"
-"   float nom = a2;\n"
-"   float denom = (NdotH2 * (a2 - 1.0) + 1.0);\n"
-"   denom = PI * denom * denom;\n"
-"   return nom / denom;\n"
-"}\n"
-"float GeometrySchlickGGX(float NdotV, float roughness) {\n"
-"   float r = (roughness + 1.0);\n"
-"   float k = (r * r) / 8.0;\n"
-"   float nom = NdotV;\n"
-"   float denom = NdotV * (1.0 - k) + k;\n"
-"   return nom / denom;\n"
-"}\n"
-"float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {\n"
-"   float NdotV = max(dot(N, V), 0.0);\n"
-"   float NdotL = max(dot(N, L), 0.0);\n"
-"   float ggx2 = GeometrySchlickGGX(NdotV, roughness);\n"
-"   float ggx1 = GeometrySchlickGGX(NdotL, roughness);\n"
-"   return ggx1 * ggx2;\n"
-"}\n"
-"void main() {\n"
-"   vec3 albedo = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));\n"
-"   float metallic = texture(metallicMap, TexCoords).r;\n"
-"   float roughness = texture(roughnessMap, TexCoords).r;\n"
-"   float ao = texture(aoMap, TexCoords).r;\n"
-"   vec3 N = getNormalFromMap();\n"
-"   vec3 V = normalize(viewPos - WorldPos);\n"
-"   vec3 F0 = vec3(0.04);\n"
-"   F0 = mix(F0, albedo, metallic);\n"
-"   vec3 Lo = vec3(0.0);\n"
-"   for (int i = 0; i < 4; i++) {\n"
-"       vec3 L = normalize(lightPosition[i] - WorldPos);\n"
-"       vec3 H = normalize(L + V);\n"
-"       float distance = length(lightPosition[i] - WorldPos);\n"
-"       float attenuation = 1.0 / (distance * distance);\n"
-"       vec3 radiance = lightColors[i] * attenuation;\n"
-"       vec3 F = fresnelSchlick(clamp(dot(H, V), 0.0, 1.0), F0);\n"
-"       float G = GeometrySmith(N, V, L, roughness);\n"
-"       float NDF = DistributionGGX(N, H, roughness);\n"
-"       vec3 numerator = NDF * G * F;\n"
-"       float NdotL = max(dot(N, L), 0.0);\n"
-"       float denominator = 4.0 * max(dot(N, V), 0.0) * NdotL + 0.0001;\n"
-"       vec3 specular = numerator / denominator;\n"
-"       vec3 Ks = F;\n"
-"       vec3 Kd = vec3(1.0) - Ks;\n"
-"       Kd *= 1.0 - metallic;\n"
-"       Lo += (Kd * albedo / PI + specular) * radiance * NdotL;\n"
-"   }\n"
-"   vec3 ambient = vec3(0.03) * albedo * ao;\n"
-"   vec3 color = ambient + Lo;\n"
-"   color = color / (color + vec3(1.0));\n"
-"   color = pow(color, vec3(1.0 / 2.2));\n"
-"   FragColor = vec4(color, 1.0);\n"
-"}\n";
-
-const string cubeMapVertexShader =
-"#version 330 core\n"
-"layout(location = 0) in vec3 aPos;\n"
-"out vec3 WorldPos;\n"
-"uniform mat4 projection;\n"
-"uniform mat4 view;\n"
-"void main() {\n"
-"   WorldPos = aPos;\n"
-"   gl_Position = projection * view * vec4(WorldPos, 1.0);\n"
-"}\n";
-
-const string cubeMapFragShader =
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec3 WorldPos;\n"
-"uniform sampler2D equirectangularMap;\n"
-"const vec2 invAtan = vec2(0.1591, 0.3183);\n"
-"vec2 sampleSphericalMap(vec3 v) {\n"
-"   vec2 uv = vec2(atan(v.z, v.x), asin(v.y));\n"
-"   uv *= invAtan;\n"
-"   uv += 0.5;\n"
-"   return uv;\n"
-"}\n"
-"void main() {\n"
-"   vec2 uv = sampleSphericalMap(normalize(WorldPos));\n"
-"   vec3 color = texture(equirectangularMap, uv).rgb;\n"
-"   FragColor = vec4(color, 1.0);\n"
-"}\n";
-
-const string backgroundVertexShader =
-"#version 330 core\n"
-"layout(location = 0) in vec3 aPos;\n"
-"uniform mat4 projection;\n"
-"uniform mat4 view;\n"
-"out vec3 WorldPos;\n"
-"void main() {\n"
-"   WorldPos = aPos;\n"
-"   mat4 rotView = mat4(mat3(view));\n"
-"   vec4 clipPos = projection * rotView * vec4(WorldPos, 1.0);\n"
-"   gl_Position = clipPos.xyww;\n"
-"}\n";
-
-const string backgroundFragShader =
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec3 WorldPos;\n"
-"uniform samplerCube environmentMap;\n"
-"void main() {\n"
-"   vec3 envColor = textureLod(environmentMap, WorldPos, 0.0).rgb;\n"
-"   envColor = envColor / (envColor + vec3(1.0f));\n"
-"   envColor = pow(envColor, vec3(1.0/2.2));\n"
-"   FragColor = vec4(envColor, 1.0);\n"
-"}\n";
-
-const string hdrboxVertexShader =
-"#version 330 core\n"
-"layout(location = 0) in vec3 aPos;\n"
-"uniform mat4 projection;\n"
-"uniform mat4 view;\n"
-"out vec3 WorldPos;\n"
-"void main() {\n"
-"   WorldPos = aPos;\n"
-"   gl_Position = projection * view * vec4(WorldPos, 1.0);\n"
-"}\n";
-
-const string hdrboxFragShader =
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec3 WorldPos;\n"
-"uniform sampler2D testMap;\n"
-"const vec2 invAtan = vec2(0.1591, 0.3183);\n"
-"vec2 sampleSphericalMap(vec3 v) {\n"
-"   vec2 uv = vec2(atan(v.z, v.x), asin(v.y));\n"
-"   uv *= invAtan;\n"
-"   uv += 0.5;\n"
-"   return uv;\n"
-"}\n"
-"void main() {\n"
-"   vec2 uv = sampleSphericalMap(normalize(WorldPos));\n"
-"   vec3 color = texture(testMap, uv).rgb;\n"
-"   FragColor = vec4(color, 1.0);\n"
-"}\n";
-
-const string irradianceConvolutionFragShader =
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec3 WorldPos;\n"
-"uniform samplerCube environmentMap;\n"
-"const float PI = 3.14159265359;\n"
-"void main() {\n"
-"   vec3 normal = normalize(WorldPos);\n"
-"   vec3 irradiance = vec3(0.0f);\n"
-"   vec3 up = vec3(0,1,0);\n"
-"   vec3 right = normalize(cross(up, normal));\n"
-"   up = normalize(cross(right, normal));\n"
-"   float sampleDelta = 0.025;\n"
-"   float nrSamples = 0.0;\n"
-"   for (float phi = 0.0; phi < 2.0 * PI; phi += sampleDelta) {\n"
-"       for (float theta = 0.0; theta < 0.5 * PI; theta += sampleDelta) {\n"
-"           vec3 tangentSample = vec3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));\n"
-"           vec3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * normal;\n"
-"           irradiance += texture(environmentMap, sampleVec).rgb * cos(theta) * sin(theta);\n"
-"           nrSamples++;\n"
-"       }\n"
-"   }\n"
-"   irradiance = PI * irradiance * (1.0 / nrSamples);\n"
-"   FragColor = vec4(irradiance, 1.0);\n"
-"}\n";
-
-const string iblDiffusePbrFragShader =
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec3 WorldPos;\n"
-"in vec3 Normal;\n"
-"in vec2 TexCoords;\n"
-"uniform vec3 albedo;\n"
-"uniform float roughness;\n"
-"uniform float metallic;\n"
-"uniform float ao;\n"
-"uniform samplerCube irradianceMap;\n"
-"uniform vec3 lightPosition[4];\n"
-"uniform vec3 lightColors[4];\n"
-"uniform vec3 viewPos;\n"
-"const float PI = 3.15159265359;\n"
-"vec3 fresnelSchlick(float cosTheta, vec3 F0) {\n"
-"   return F0 +(1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);\n"
-"}\n"
-"float DistributionGGX(vec3 N, vec3 H, float roughness) {\n"
-"   float alpha = roughness * roughness;\n"
-"   float alpha2 = alpha * alpha;\n"
-"   float NdotH = max(dot(N, H), 0.0);\n"
-"   float NdotH2 = NdotH * NdotH;\n"
-"   float nom = alpha2;\n"
-"   float denom = (NdotH2 * (alpha2 - 1.0) + 1.0);\n"
-"   denom = PI * denom * denom;\n"
-"   return nom / denom;\n"
-"}\n"
-"float GeometrySchlickGGX(float NdotV, float roughness) {\n"
-"   float r = roughness + 1.0;\n"
-"   float k = (r * r) /8.0;\n"
-"   float nom = NdotV;\n"
-"   float denom = NdotV * (1.0 - k) + k;\n"
-"   return nom / denom;\n"
-"}\n"
-"float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {\n"
-"   float NdotV = max(dot(N, V), 0.0);\n"
-"   float NdotL = max(dot(N, L), 0.0);\n"
-"   float ggx2 = GeometrySchlickGGX(NdotV, roughness);\n"
-"   float ggx1 = GeometrySchlickGGX(NdotL, roughness);\n"
-"   return ggx2 * ggx1;\n"
-"}\n"
-"void main() {\n"
-"   vec3 N = normalize(Normal);\n"
-"   vec3 V = normalize(viewPos - WorldPos);\n"
-"   vec3 F0 = vec3(0.04);\n"
-"   F0 = mix(F0, albedo, metallic);\n"
-"   vec3 Lo = vec3(0.0f);\n"
-"   for (int i = 0; i < 4; i++) {\n"
-"       vec3 L = normalize(lightPosition[i] - WorldPos);\n"
-"       vec3 H = normalize(V + L);\n"
-"       float distance = length(lightPosition[i] - WorldPos);\n"
-"       float attenuation = 1.0 / (distance * distance);\n"
-"       vec3 radiance = lightColors[i] * attenuation;\n"
-"       float NDF = DistributionGGX(N, H, roughness);\n"
-"       float G = GeometrySmith(N, V, L, roughness);\n"
-"       vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);\n"
-"       vec3 numerator = NDF * G * F;\n"
-"       float NdotL = max(dot(N, L), 0.0);\n"
-"       float denominator = 4.0 * max(dot(N, V), 0.0) * NdotL + 0.0001;\n"
-"       vec3 specular = numerator / denominator;\n"
-"       vec3 Ks = F;\n"
-"       vec3 Kd = vec3(1.0) - Ks;\n"
-"       Lo += (Kd * albedo / PI + specular) * radiance * NdotL;\n"
-"   }\n"
-"   vec3 Ks = fresnelSchlick(max(dot(N, V), 0.0), F0);\n"
-"   vec3 Kd = vec3(1.0) - Ks;\n"
-"   Kd *= (1.0 - metallic);\n"
-"   vec3 irradiance = texture(irradianceMap, N).rgb;\n"
-"   vec3 diffuse = irradiance * albedo;\n"
-"   vec3 ambient = Kd * diffuse * ao;\n"
-"   vec3 color = ambient + Lo;\n"
-"   color = color / (color + vec3(1.0f));\n"
-"   color = pow(color, vec3(1.0 / 2.2));\n"
-"   FragColor = vec4(color, 1.0);\n"
-"   vec3 gaga = Kd * diffuse;\n"
-"   if (gaga.y <= 0.1) FragColor = vec4(0.5, 0, 0, 1.0);\n"
-"}\n";
-
-const string shadowMappingDepthVertexShader =
-"#version 330 core\n"
-"layout(location = 0) in vec3 aPos;\n"
-"uniform mat4 lightSpaceMatrix;\n"
-"uniform mat4 model;\n"
-"void main() {\n"
-"   gl_Position = lightSpaceMatrix * model * vec4(aPos, 1.0);\n"
-"}\n";
-
-const string shadowMappingDepthFragShader =
-"#version 330 core\n"
-"void main() {}\n";
-
-const string shadowMappingVertexShader =
-"#version 330 core\n"
-"layout(location = 0) in vec3 aPos;\n"
-"layout(location = 1) in vec3 aNormal;\n"
-"layout(location = 2) in vec2 aTexCoords;\n"
-"out vec2 TexCoords;\n"
-"out vec3 FragPos;\n"
-"out vec3 Normal;\n"
-"out vec4 lightFragPos;\n"
-"uniform mat4 projection;\n"
-"uniform mat4 view;\n"
-"uniform mat4 model;\n"
-"uniform mat4 lightSpaceMatrix;\n"
-"void main() {\n"
-"   FragPos = vec3(model * vec4(aPos, 1.0));\n"
-"   Normal = transpose(inverse(mat3(model))) * aNormal;\n"
-"   TexCoords = aTexCoords;\n"
-"   lightFragPos = lightSpaceMatrix * vec4(FragPos, 1.0);\n"
-"   gl_Position = projection * view * vec4(FragPos, 1.0);\n"
-"}\n";
-
-const string shadowMappingFragShader =
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec2 TexCoords;\n"
-"in vec3 FragPos;\n"
-"in vec3 Normal;\n"
-"in vec4 lightFragPos;\n"
-"uniform sampler2D diffuseTexture;\n"
-"uniform sampler2D shadowMap;\n"
-"uniform vec3 viewPos;\n"
-"uniform vec3 lightPos;\n"
-"float shadowCalculation(vec4 fragPosLightSpace) {\n"
-"   vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;\n"
-"   projCoords = projCoords * 0.5 + 0.5;\n"
-"   if (projCoords.z > 1.f) return 0.f;"
-"   float closestDepth = texture(shadowMap, projCoords.xy).r;\n"
-"   float currentDepth = projCoords.z;\n"
-"   vec3 normal = normalize(Normal);\n"
-"   vec3 lightDir = normalize(lightPos - FragPos);\n"
- "   float bias = max(0.05 * (1 - dot(normal, -lightDir)), 0.005);\n"
-//"   shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;"
-"   float shadow = 0.f;\n"
-"   vec2 texelSize = 1.0 / textureSize(shadowMap, 0);\n"
-"   for (int x = -1; x <= 1; x++) {\n"
-"       for (int y = -1; y <= 1; y++) {\n"
-"           float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;\n"
-"           shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;\n"
-"       }\n"
-"   }\n"
-"   shadow /= 9.0;\n"
-"   return shadow;\n"
-"}\n"
-"void main() {\n"
-"   vec3 color = texture(diffuseTexture, TexCoords).rgb;\n"
-"   vec3 normal = normalize(Normal);\n"
-"   vec3 lightColor = vec3(0.3);\n"
-"   vec3 ambient = 0.3 * lightColor;\n"
-"   vec3 lightDir = normalize(lightPos - FragPos);\n"
-"   float diff = max(dot(lightDir, normal), 0.0);\n"
-"   vec3 diffuse = lightColor * diff;\n"
-"   vec3 viewDir = normalize(viewPos - FragPos);\n"
-"   vec3 halfwayDir = normalize(viewDir + lightDir);\n"
-"   float spec = max(dot(halfwayDir, normal), 0);\n"
-"   vec3 specular = spec * lightColor;\n"
-"   float shadow = shadowCalculation(lightFragPos);\n"
-"   vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;\n"
-"   FragColor = vec4(lighting, 1);\n"
-"}\n";
-
-const string shadowDebugVertexShader =
-"#version 330 core\n"
-"layout(location = 0) in vec3 aPos;\n"
-"layout(location = 1) in vec2 aTexCoords;\n"
-"out vec2 TexCoords;\n"
-"void main() {\n"
-"   TexCoords = aTexCoords;\n"
-"   gl_Position = vec4(aPos, 1.0);\n"
-"}\n";
-
-const string shadowDebugFragShader =
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec2 TexCoords;\n"
-"uniform sampler2D depthMap;\n"
-"uniform float near_plane;\n"
-"uniform float far_plane;\n"
-"void main() {\n"
-"   float depthValue = texture(depthMap, TexCoords).r;\n"
-"   FragColor = vec4(vec3(depthValue), 1.0);\n"
-"}\n";
-
-const string pcssVertexShader =
-"#version 330 core\n"
-"layout(location = 0) in vec3 aPos;\n"
-"layout(location = 1) in vec3 aNormal;\n"
-"layout(location = 2) in vec2 aTexCoords;\n"
-"out vec3 FragPos;\n"
-"out vec3 Normal;\n"
-"out vec2 TexCoords;\n"
-"out vec4 lightFragPos;\n"
-"uniform mat4 model;\n"
-"uniform mat4 view;\n"
-"uniform mat4 projection;\n"
-"uniform mat4 lightSpaceMatrix;\n"
-"void main() {\n"
-"   FragPos = vec3(model * vec4(aPos, 1.0));\n"
-"   Normal = transpose(inverse(mat3(model))) * aNormal;\n"
-"   TexCoords = aTexCoords;\n"
-"   lightFragPos = lightSpaceMatrix * vec4(FragPos, 1.0);\n"
-"   gl_Position = projection * view * vec4(FragPos, 1.0);\n"
-"}\n";
-
-const string pcssFragShader =
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec3 FragPos;\n"
-"in vec3 Normal;\n"
-"in vec2 TexCoords;\n"
-"in vec4 lightFragPos;\n"
-"uniform sampler2D diffuseTexture;\n"
-"uniform sampler2D shadowMap;\n"
-"uniform vec3 lightPos;\n"
-"uniform vec3 viewPos;\n"
-"#define NUM_SAMPLES 100\n"
-"#define PI2 6.283185307179586\n"
-"#define PI 3.141592653589793\n"
-"#define NUM_RINGS 10\n"
-"vec2 poissonDisk[NUM_SAMPLES];\n"
-"highp float rand_2to1(vec2 uv) {\n"
-"   const highp float a = 12.9898, b = 78.233, c = 43758.5453;\n"
-"   highp float dt = dot(uv.xy, vec2(a, b));\n"
-"   highp float sn = mod( dt, PI );\n"
-"   return fract(sin(sn) * c);\n"
-"}\n"
-"void poissonDiskSamples(const in vec2 randomSeed) {\n"
-"   float ANGLE_STEP = PI2 * float(NUM_RINGS)/float( NUM_SAMPLES);\n"
-"   float INV_NUM_SAMPLES = 1.0 / float(NUM_SAMPLES);\n"
-"   float angle = rand_2to1(randomSeed) * PI2;\n"
-"   float radius = INV_NUM_SAMPLES;\n"
-"   float radiusStep = radius;\n"
-"   for (int i = 0; i < NUM_SAMPLES; i++) {\n"
-"       poissonDisk[i] = vec2(cos(angle), sin(angle)) * pow( radius, 0.75 );\n"
-"       radius += radiusStep;\n"
-"       angle += ANGLE_STEP;\n"
-"   }\n"
-"}\n"
-"float pcf(vec3 projCoords, int r) {\n"
-"   if (projCoords.z > 1) return 0.f;\n"
-"   float cloestDepth = texture(shadowMap, projCoords.xy).r;\n"
-"   float currentDepth = projCoords.z;\n"
-"   float bias = max(0.008 * (1 - dot(normalize(Normal), normalize(FragPos - lightPos))), 0.004);\n"
-"   vec2 texelSize = 1.0 / textureSize(shadowMap, 0);\n"
-"   float shadow = 0.0;\n"
-"   poissonDiskSamples(projCoords.xy);\n"
-"   for (int i = 0; i < NUM_SAMPLES; i++) {\n"
-"       float pcfDepth = texture(shadowMap, projCoords.xy + r * poissonDisk[i] * texelSize).r;\n"
-"       shadow += currentDepth - bias > pcfDepth ? 1.f : 0.f;\n"
-"   }\n"
-"   shadow /= float(NUM_SAMPLES);\n"
-"   return shadow;\n"
-"}\n"
-"float averageBlockerDepth(vec3 projCoords, vec2 texelSize) {\n"
-"   float blockerZ = 0.0;\n"
-"   int count = 0;\n"
-"   int r = 5;\n"
-"   poissonDiskSamples(projCoords.xy+vec2(0.1314,0.351));"
-"   for (int i = 0; i < NUM_SAMPLES; i++) {\n"
-"       float depth = texture(shadowMap, projCoords.xy + r * poissonDisk[i] * texelSize).r;\n"
-"       if (depth < projCoords.z) {\n"
-"           count++;\n"
-"           blockerZ += depth;\n"
-"       }\n"
-"   }\n"
-"   if (count == 0 || count == (2*r+1)*(2*r+1)) return 1.0f;\n"
-"   return blockerZ / count;\n"
-"}\n"
-"float pcss(vec4 lightFragPos) {\n"
-"   vec3 projCoords = lightFragPos.xyz / lightFragPos.w;\n"
-"   projCoords = projCoords * 0.5 + 0.5;\n"
-"   const float weightOfLight = 10.0;\n"
-"   vec2 texelSize = 1.0 / textureSize(shadowMap, 0);\n"
-"   float averBlocker = averageBlockerDepth(projCoords, texelSize);\n"
-"   float penumbra = (projCoords.z - averBlocker) * weightOfLight / averBlocker;\n"
-"   float visiablity = pcf(projCoords, int(penumbra));\n"
-"   return visiablity;\n"
-"}\n"
-"void main() {\n"
-"   vec3 normal = normalize(Normal);\n"
-"   vec3 color = texture(diffuseTexture, TexCoords).rgb;\n"
-"   vec3 lightColor = vec3(0.3);\n"
-"   vec3 ambient = 0.3 * lightColor;\n"
-"   vec3 lightDir = normalize(lightPos - FragPos);\n"
-"   float diff = max(dot(lightDir, normal), 0.0);\n"
-"   vec3 diffuse = diff * lightColor;\n"
-"   vec3 viewDir = normalize(viewPos - FragPos);\n"
-"   vec3 halfwayDir = normalize(lightDir + viewDir);\n"
-"   float spec = max(dot(halfwayDir, normal), 0);\n"
-"   vec3 specular = spec * lightColor;\n"
-"   float shadow = pcss(lightFragPos);\n"
-"   vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;\n"
-"   FragColor = vec4(lighting, 1.0);\n"
-"}\n";
-
-const string PBRVertexShader =
-"#version 330 core\n"
-"layout(location = 0) in vec3 aPos;\n"
-"layout(location = 1) in vec3 aNormal;\n"
-"layout(location = 2) in vec2 aTexCoords;\n"
-"out vec3 FragPos;\n"
-"out vec3 Normal;\n"
-"out vec2 TexCoords;\n"
-"uniform mat4 model;\n"
-"uniform mat4 view;\n"
-"uniform mat4 projection;\n"
-"void main() {\n"
-"   TexCoords = aTexCoords;\n"
-"   FragPos = vec3(model * vec4(aPos, 1.0));\n"
-"   Normal = transpose(inverse(mat3(model))) * aNormal;\n"
-//"   Normal = mat3(model) * aNormal;\n"
-"   gl_Position = projection * view * vec4(FragPos, 1.0);\n"
-"}\n";
-
-const string PBRFragShader =
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec3 FragPos;\n"
-"in vec3 Normal;\n"
-"in vec2 TexCoords;\n"
-"uniform vec3 albedo;\n"
-"uniform float roughness;\n"
-"uniform float metallic;\n"
-"uniform float ao;\n"
-"uniform vec3 viewPos;\n"
-"uniform samplerCube irradianceMap;\n"
-"uniform samplerCube prefilterMap;\n"
-"uniform sampler2D brdfLUT;\n"
-"uniform vec3 lightPosition[4];\n"
-"uniform vec3 lightColors[4];\n"
-"const float PI = 3.14159265359;\n"
-"float DistributionGGX(vec3 N, vec3 H, float roughness) {\n"
-"   float a = roughness * roughness;\n"
-"   float a2 = a * a;\n"
-"   float NdotH = max(dot(N, H), 0.0);\n"
-"   float NdotH2 = NdotH * NdotH;\n"
-"   float nom = a2;\n"
-"   float denom = NdotH2 * (a2 - 1.0) + 1.0;\n"
-"   denom = PI * denom * denom;\n"
-"   return nom / denom;\n"
-"}\n"
-"float GeometrySchlickGGX(float NdotV, float roughness) {\n"
-"   float r = roughness + 1.0;\n"
-"   float k = r * r / 8.0;\n"
-"   float nom = NdotV;\n"
-"   float denom = NdotV * (1.0 - k) + k;\n"
-"   return nom / denom;\n"
-"}\n"
-"float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {\n"
-"   float NdotV = max(dot(N, V), 0.0);\n"
-"   float NdotL = max(dot(N, L), 0.0);\n"
-"   float ggx2 = GeometrySchlickGGX(NdotV, roughness);\n"
-"   float ggx1 = GeometrySchlickGGX(NdotL, roughness);\n"
-"   return ggx2 * ggx1;\n"
-"}\n"
-"vec3 fresnelSchlick(float cosTheta, vec3 F0) {\n"
-"   return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);\n"
-"}\n"
-"vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {\n"
-"   return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);\n"
-"}\n"
-"void main() {\n"
-"   vec3 N = normalize(Normal);\n"
-"   vec3 V = normalize(viewPos - FragPos);\n"
-"   vec3 R = reflect(-V, N);\n"
-"   vec3 F0 = vec3(0.04);\n"
-"   F0 = mix(F0, albedo, metallic);\n"
-"   vec3 Lo = vec3(0.0);\n"
-"   for (int i = 0; i < 4; i++) {\n"
-"       vec3 L = normalize(lightPosition[i] - FragPos);\n"
-"       vec3 H = normalize(V + L);\n"
-"       float distance = length(lightPosition[i] - FragPos);\n"
-"       float attenuation = 1.0 / (distance * distance);\n"
-"       vec3 radiance = lightColors[i] * attenuation;\n"
-"       float NDF = DistributionGGX(N, H, roughness);\n"
-"       float G = GeometrySmith(N, V, L, roughness);\n"
-"       vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);\n"
-"       vec3 numerator = NDF * G * F;\n"
-"       float NdotL = max(dot(N, L), 0.0);\n"
-"       float denominator = 4.0 * max(dot(N, V), 0.0) * NdotL + 0.0001;\n"
-"       vec3 specular = numerator / denominator;\n"
-"       vec3 Ks = F;\n"
-"       vec3 Kd = 1.0 - Ks;\n"
-"       Kd *= 1.0 - metallic;\n"
-"       Lo += (Kd * albedo / PI + specular) * radiance * NdotL;\n"
-"   }\n"
-"   vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);\n"
-"   vec3 Ks = F;\n"
-"   vec3 Kd = 1.0 - Ks;\n"
-"   Kd *= 1.0 - metallic;\n"
-"   vec3 irradiance = texture(irradianceMap, N).rgb;\n"
-"   vec3 diffuse = irradiance * albedo;\n"
-"   const float MAX_REFLECTION_LOD = 4.0;\n"
-"   vec3 prefilteredColor = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOD).rgb;\n"
-"   vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;\n"
-"   vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);\n"
-"   vec3 ambient = (Kd * diffuse + specular) * ao;\n"
-//"   ambient.x -= 0.3;\n"
-//"   ambient.z -= 0.3;\n"
-"   vec3 color = ambient + Lo;\n"
-"   color = color / (color + vec3(1.0));\n"
-"   color = pow(color, vec3(1.0/ 2.2));\n"
-"   FragColor = vec4(color, 1.0);\n"
-//"   if(specular.x <= 0.0 || specular.y <= 0.3 || specular.z <= 0.3) FragColor = vec4(0, 0.5, 0, 1.0);\n"
-//"   if (irradiance.x <= 0 || irradiance.y <= 0 || irradiance.z <= 0) FragColor = vec4(0.5, 0, 0, 1.0);\n"
-//"   if (albedo.x <= 0 || albedo.y <= 0 || albedo.z <= 0) FragColor = vec4(0, 0, 0.5, 1.0);"
-//"   if (diffuse.x <= 0 || diffuse.y <= 0 || diffuse.z <= 0) FragColor = vec4(0, 0, 0.5, 1.0);"
-//"   if (prefilteredColor.x >= 0.3 || prefilteredColor.z >= 0.3) FragColor = vec4(0, 0, 0.5, 1.0);\n"
-//"   vec3 gaga = F * brdf.x + brdf.y;\n"
-//"   if (gaga.x >= 0.3 && gaga.z >= 0.3) FragColor = vec4(0.5, 0.0, 0, 1.0);\n"
-//"   if (brdf.x == 0 && brdf.y == 0) FragColor = vec4(0.5, 0, 0, 1.0);\n"
-//"   vec3 haha = Kd * diffuse;\n"
-//"   if (haha.y <= 0.1) FragColor = vec4(0.5,0,0,1.0);\n"
-"}\n";
-
-const string brdfVertexShader =
-"#version 330 core\n"
-"layout(location = 0) in vec3 aPos;\n"
-"layout(location = 1) in vec2 aTexCoords;\n"
-"out vec2 TexCoords;\n"
-"void main() {\n"
-"   TexCoords = aTexCoords;\n"
-"   gl_Position = vec4(aPos, 1.0);\n"
-"}\n";
-
-const string brdfFragShader =
-"#version 330 core\n"
-"out vec2 FragColor;\n"
-"in vec2 TexCoords;\n"
-"const float PI = 3.14159265359;\n"
-"float RadicalInverse_Vdc(uint bits) {\n"
-"   bits = (bits << 16u) | (bits >> 16u);\n"
-"   bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);\n"
-"   bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);\n"
-"   bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);\n"
-"   bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);\n"
-"   return float(bits) * 2.3283064365386963e-10;\n"
-"}\n"
-"vec2 Hammersley(uint i, uint N) {\n"
-"   return vec2(float(i) / float(N), RadicalInverse_Vdc(i));\n"
-"}\n"
-"vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness) {\n"
-"   float a = roughness * roughness;\n"
-"   float phi = 2.0 * PI * Xi.x;\n"
-"   float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a*a - 1.0) * Xi.y));\n"
-"   float sinTheta = sqrt(1.0 - cosTheta * cosTheta);\n"
-"   vec3 H;\n"
-"   H.x = cos(phi) * sinTheta;\n"
-"   H.y = sin(phi) * sinTheta;\n"
-"   H.z = cosTheta;\n"
-"   vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);\n"
-"   vec3 tangent = normalize(cross(up, N));\n"
-"   vec3 bitangent = cross(N, tangent);\n"
-"   vec3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;\n"
-"   return normalize(sampleVec);\n"
-"}\n"
-"float GeometrySchlickGGX(float NdotV, float roughness) {\n"
-"   float a = roughness;\n"
-"   float k = a * a / 2.0;\n"
-"   float nom = NdotV;\n"
-"   float denom = NdotV * (1.0 - k) + k;\n"
-"   return nom / denom;\n"
-"}\n"
-"float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {\n"
-"   float NdotV = max(dot(N, V), 0.0);\n"
-"   float NdotL = max(dot(N, L), 0.0);\n"
-"   float ggx2 = GeometrySchlickGGX(NdotV, roughness);\n"
-"   float ggx1 = GeometrySchlickGGX(NdotL, roughness);\n"
-"   return ggx2 * ggx1;\n"
-"}\n"
-"vec2 IntegrateBRDF(float NdotV, float roughness) {\n"
-"   vec3 V;\n"
-"   V.x = sqrt(1.0 - NdotV*NdotV);\n"
-"   V.y = 0.0;\n"
-"   V.z = NdotV;\n"
-"   float A = 0.0;\n"
-"   float B = 0.0;\n"
-"   vec3 N = vec3(0.0, 0.0, 1.0);\n"
-"   const uint SAMPLE_COUNT = 1024u;\n"
-"   for (uint i = 0u; i < SAMPLE_COUNT; i++) {\n"
-"       vec2 Xi = Hammersley(i, SAMPLE_COUNT);\n"
-"       vec3 H = ImportanceSampleGGX(Xi, N, roughness);\n"
-"       vec3 L = normalize(2.0 * dot(V, H) * H - V);\n"
-"       float NdotL = max(L.z, 0.0);\n"
-"       float NdotH = max(H.z, 0.0);\n"
-"       float VdotH = max(dot(V, H), 0.0);\n"
-"       if (NdotL > 0.0) {\n"
-"           float G = GeometrySmith(N, V, L, roughness);\n"
-"           float G_Vis = (G * VdotH) / (NdotH * NdotV);\n"
-"           float Fc = pow(1.0 - VdotH, 5.0);\n"
-"           A += (1.0 - Fc) * G_Vis;\n"
-"           B += Fc * G_Vis;\n"
-"       }\n"
-"   }\n"
-"   A /= float(SAMPLE_COUNT);\n"
-"   B /= float(SAMPLE_COUNT);\n"
-"   return vec2(A, B);\n"
-"}\n"
-"void main() {\n"
-"   vec2 integratedBRDF = IntegrateBRDF(TexCoords.x, TexCoords.y);\n"
-"   FragColor = integratedBRDF;\n"
-"}\n";
-//const string brdfFragShader =
-//"#version 330 core\n"
-//"out vec2 FragColor;\n"
-//"in vec2 TexCoords;\n"
-//"const float PI = 3.14159265359;\n"
-//"float RadicalInverse_VdC(uint bits) {\n"
-//    "bits = (bits << 16u) | (bits >> 16u);\n"
-//    "bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);\n"
-//    "bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);\n"
-//    "bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);\n"
-//    "bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);\n"
-//    "return float(bits) * 2.3283064365386963e-10;\n"
-//"}\n"
-//"vec2 Hammersley(uint i, uint N) {\n"
-//    "return vec2(float(i) / float(N), RadicalInverse_VdC(i));\n"
-//"}\n"
-//"vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness) {\n"
-//    "float a = roughness * roughness;\n"
-//    "float phi = 2.0 * PI * Xi.x;\n"
-//    "float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));\n"
-//    "float sinTheta = sqrt(1.0 - cosTheta * cosTheta);\n"
-//    "vec3 H;\n"
-//    "H.x = cos(phi) * sinTheta;\n"
-//    "H.y = sin(phi) * sinTheta;\n"
-//    "H.z = cosTheta;\n"
-//    "vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);\n"
-//    "vec3 tangent = normalize(cross(up, N));\n"
-//    "vec3 bitangent = cross(N, tangent);\n"
-//    "vec3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;\n"
-//    "return normalize(sampleVec);\n"
-//"}\n"
-//"float GeometrySchlickGGX(float NdotV, float roughness) {\n"
-//    "float a = roughness;\n"
-//    "float k = (a * a) / 2.0;\n"
-//    "float nom = NdotV;\n"
-//    "float denom = NdotV * (1.0 - k) + k;\n"
-//    "return nom / denom;\n"
-//"}\n"
-//"float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {\n"
-//    "float NdotV = max(dot(N, V), 0.0);\n"
-//    "float NdotL = max(dot(N, L), 0.0);\n"
-//    "float ggx2 = GeometrySchlickGGX(NdotV, roughness);\n"
-//    "float ggx1 = GeometrySchlickGGX(NdotL, roughness);\n"
-//    "return ggx1 * ggx2;\n"
-//"}\n"
-//"vec2 IntegrateBRDF(float NdotV, float roughness) {\n"
-//    "vec3 V;\n"
-//    "V.x = sqrt(1.0 - NdotV * NdotV);\n"
-//    "V.y = 0.0;\n"
-//    "V.z = NdotV;\n"
-//    "float A = 0.0;\n"
-//    "float B = 0.0;\n"
-//    "vec3 N = vec3(0.0, 0.0, 1.0);\n"
-//    "const uint SAMPLE_COUNT = 1024u;\n"
-//    "for (uint i = 0u; i < SAMPLE_COUNT; ++i) {\n"
-//        "vec2 Xi = Hammersley(i, SAMPLE_COUNT);\n"
-//        "vec3 H = ImportanceSampleGGX(Xi, N, roughness);\n"
-//        "vec3 L = normalize(2.0 * dot(V, H) * H - V);\n"
-//        "float NdotL = max(L.z, 0.0);\n"
-//        "float NdotH = max(H.z, 0.0);\n"
-//        "float VdotH = max(dot(V, H), 0.0);\n"
-//        "if (NdotL > 0.0) {\n"
-//            "float G = GeometrySmith(N, V, L, roughness);\n"
-//            "float G_Vis = (G * VdotH) / (NdotH * NdotV);\n"
-//            "float Fc = pow(1.0 - VdotH, 5.0);\n"
-//            "A += (1.0 - Fc) * G_Vis;\n"
-//            "B += Fc * G_Vis;\n"
-//        "}\n"
-//    "}\n"
-//    "A /= float(SAMPLE_COUNT);\n"
-//    "B /= float(SAMPLE_COUNT);\n"
-//    "return vec2(A, B);\n"
-//"}\n"
-//"void main() {\n"
-//"vec2 integratedBRDF = IntegrateBRDF(TexCoords.x, TexCoords.y);\n"
-//"FragColor = integratedBRDF;\n"
-//"}\n";
-
-const string prefilterFragShader =
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec3 WorldPos;\n"
-"uniform samplerCube environmentMap;\n"
-"uniform float roughness;\n"
-"const float PI = 3.14159265359;\n"
-"float DistributionGGX(vec3 N, vec3 H, float roughness) {\n"
-"   float a = roughness * roughness;\n"
-"   float a2 = a * a;\n"
-"   float NdotH = max(dot(N, H), 0.0);\n"
-"   float NdotH2 = NdotH * NdotH;\n"
-"   float nom = a2;\n"
-"   float denom = NdotH2 * (a2 - 1.0) + 1.0;\n"
-"   denom = PI * denom * denom;\n"
-"   return nom / denom;\n"
-"}\n"
-"float RadicalInverse_Vdc(uint bits) {\n"
-"   bits = (bits << 16u) | (bits >> 16u);\n"
-"   bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);\n"
-"   bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);\n"
-"   bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);\n"
-"   bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);\n"
-"   return float(bits) * 2.3283064365386963e-10;\n"
-"}\n"
-"vec2 Hammersley(uint i, uint N) {\n"
-"   return vec2(float(i) / float(N), RadicalInverse_Vdc(i));\n"
-"}\n"
-"vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness) {\n"
-"   float a = roughness * roughness;\n"
-"   float phi = 2.0 * PI * Xi.x;\n"
-"   float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a*a - 1.0) * Xi.y));\n"
-"   float sinTheta = sqrt(1.0 - cosTheta * cosTheta);\n"
-"   vec3 H;\n"
-"   H.x = cos(phi) * sinTheta;\n"
-"   H.y = sin(phi) * sinTheta;\n"
-"   H.z = cosTheta;\n"
-"   vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);\n"
-"   vec3 tangent = normalize(cross(up, N));\n"
-"   vec3 bitangent = cross(N, tangent);\n"
-"   vec3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;\n"
-"   return normalize(sampleVec);\n"
-"}\n"
-"void main() {\n"
-"   vec3 N = normalize(WorldPos);\n"
-"   vec3 R = N;\n"
-"   vec3 V = R;\n"
-"   const uint SAMPLE_COUNT = 1024u;\n"
-"   vec3 prefilteredColor = vec3(0.0);\n"
-"   float totalWeight = 0.0;\n"
-"   const float resolution = 512.0;\n"
-"   for(uint i = 0u; i < SAMPLE_COUNT; i++) {\n"
-"       vec2 Xi = Hammersley(i, SAMPLE_COUNT);\n"
-"       vec3 H = ImportanceSampleGGX(Xi, N, roughness);\n"
-"       vec3 L = normalize(2.0 * dot(V, H) * H - V);\n"
-"       float NdotL = max(dot(N, L), 0.0);\n"
-"       if (NdotL > 0.0) {\n"
-"           float D   = DistributionGGX(N, H, roughness);\n"
-"           float NdotH = max(dot(N, H), 0.0);\n"
-"           float HdotV = max(dot(H, V), 0.0);\n"
-"           float pdf = D * NdotH / (4.0 * HdotV) + 0.0001;\n"
-"           float saTexel = 4.0 * PI / (6.0 * resolution * resolution);\n"
-"           float saSample = 1.0 / (float(SAMPLE_COUNT) * pdf + 0.0001);\n"
-"           float mipLevel = roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel);\n"
-"           prefilteredColor += textureLod(environmentMap, L, mipLevel).rgb * NdotL;\n"
-"           totalWeight += NdotL;\n"
-"       }\n"
-"   }\n"
-"   prefilteredColor = prefilteredColor / totalWeight;\n"
-"   FragColor = vec4(prefilteredColor, 1.0);\n"
-"}\n";
-
-const string sdfVertexShader =
-"#version 330 core\n"
-"uniform mat4 model;\n"
-"uniform mat4 view;\n"
-"uniform mat4 projection;\n"
-"void main() {\n"
-"   "
-"}\n";
-
-const string sdfFragShader =
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"void main() {\n"
-"   "
-"}\n";
-
-const string raymarchingVertexShader =
-"#version 330 core\n"
-"layout(location = 0) in vec3 aPos;\n"
-"layout(location = 1) in vec3 aNormal;\n"
-"layout(location = 2) in vec3 aTexCoords;\n"
-"out mat4 modelmat;\n"
-"out mat4 viewmat;\n"
-"out mat4 projectionmat;\n"
-"uniform mat4 model;\n"
-"uniform mat4 view;\n"
-"uniform mat4 projection;\n"
-"void main() {\n"
-"   modelmat = model;\n"
-"   viewmat = view;\n"
-"   projectionmat = projection;\n"
-"   gl_Position = projection * view * model * vec4(aPos, 1.0);\n"
-"}\n";
-
-//const string raymarchingFragShader =
-//"#version 330 core\n"
-//"out vec4 FragColor;\n"
-//"in mat4 modelmat;\n"
-//"in mat4 viewmat;\n"
-//"in mat4 projectionmat;\n"
-//"uniform vec2 viewPort;\n"
-//"uniform vec3 viewPos;\n"
-//"uniform vec3 lightPos;\n"
-//"#define MAXSTEP 40\n"
-//"#define TOLERANCE 0.0001\n"
-//"#define NORMALESP 0.001\n"
-//"vec2 coord2uv(vec2 coord) {\n"
-//"   return 2.0 * coord / viewPort - 1.0;\n"
-//"}\n"
-//"vec3 uv2ray(vec2 uv) {\n"
-//"   vec4 camdir = inverse(projectionmat) * vec4(uv, 1.0, 1.0);\n"
-//"   camdir = camdir / camdir.w;\n"
-////"   vec3 dir = mat3(gl_ModelViewMatrixInverse) * vec3(camdir);\n"
-//"   vec3 dir = mat3(inverse(viewmat * modelmat)) * vec3(camdir);\n"
-//"   return normalize(dir);\n"
-//"}\n"
-//"vec3 eyePos() {\n"
-////"   return vec3(gl_ModelViewMatrixInverse * vec4(0,0,0,1.0));\n"
-//"   return vec3(inverse(viewmat * modelmat) * vec4(viewPos,1.0));\n"
-////"   return viewPos;\n"
-//"}\n"
-//"vec3 lightPosition() {\n"
-////"   return normalize(mat3(gl_ModelViewMatrixInverse) * lightPos);\n"
-//"   return normalize(mat3(inverse(viewmat * modelmat)) * lightPos);\n"
-////"   return lightPos;\n"
-//"}\n"
-//"vec3 spotLightPos() {\n"
-////"   return vec3(gl_ModelViewMatrixInverse * lightPos);\n"
-//"   return vec3(inverse(viewmat * modelmat) * vec4(lightPos, 1.0));\n"
-//"}\n"
-//"float sdsphere(vec3 pos, float r) {\n"
-//"   return length(pos) - r;\n"
-//"}\n"
-//"vec2 map(vec3 pos) {\n"
-//"   return vec2(sdsphere(pos, 1.0), 0.5);\n"
-//"}\n"
-//"bool marching(vec3 pos, vec3 ray, out vec3 closeing, out float material) {\n"
-//"   int step = 0;\n"
-//"   float mindist = 1;\n"
-//"   vec2 res;\n"
-//"   do {\n"
-//"       res = map(pos);\n"
-//"       if (res.x <mindist) {\n"
-//"           mindist = res.x;\n"
-//"           material = res.y;\n"
-//"           closeing = pos;\n"
-//"       }\n"
-//"       pos += ray * res.x;\n"
-//"       step++;\n"
-//"   } while(res.x > TOLERANCE && step <= MAXSTEP);\n"
-//"   return step <= MAXSTEP;\n"
-//"}\n"
-//"float procDepth(vec3 localPos) {\n"
-////"   vec3 frag = gl_ModelViewProjectionMatrix * vec4(localPos, 1.0);\n"
-//"   vec4 frag = projectionmat * viewmat * modelmat * vec4(localPos, 1.0);\n"
-//"   frag /= frag.w;\n"
-//"   return (frag.z + 1.0) / 2.0;\n"
-//"}\n"
-//"vec3 lightModel(vec3 eye, vec3 normal, vec3 light, float material) {\n"
-//"   float NL = max(dot(normal, light), 0.0);\n"
-//"   float RL = max(dot(eye, reflect(light, normal)), 0.0);\n"
-//"   return vec3(material * 0.2) + vec3(material) * NL + vec3(material) * pow(RL, 5);\n"
-//"}\n"
-//"vec3 procNormal(vec3 marchpt) {\n"
-//"   float dist = map(marchpt).x;\n"
-//"   return normalize(vec3(dist-map(marchpt-vec3(NORMALESP,0,0)).x, dist-map(marchpt-vec3(0,NORMALESP,0)).x, dist-map(marchpt-vec3(0,0,NORMALESP)).x));\n"
-//"}\n"
-//"void main() {\n"
-//"   vec2 uv = coord2uv(gl_FragCoord.xy);\n"
-//"   vec3 ro = eyePos();\n"
-//"   vec3 rd = uv2ray(uv);\n"
-//"   vec3 nearest;\n"
-//"   float material;\n"
-//"   if (marching(ro, rd, nearest, material)) {\n"
-//"       vec3 normal = procNormal(nearest);\n"
-//"       gl_FragDepth = procDepth(nearest);\n"
-//"       FragColor = vec4(lightModel(rd, normal, lightPosition(), material) * normal, 1.0);"
-//"   } else {\n"
-//"       discard;\n"
-//"   }\n"
-//"}\n";
-
-const string raymarchingFragShader =
-"uniform mat vWorldToScreen;"
-"float GetDepth(vec3 posWorld) {\n"
-"    float depth = (vWorldToScreen * vec4(posWorld, 1.0)).w;\n"
-"    return depth;\n"
-"}\n"
-"float GetGBufferDepth(vec2 uv) {\n"
-"    float depth = texture2D(uGDepth, uv).x;\n"
-"    if (depth < 1e-2) {\n"
-"        depth = 1000.0;\n"
-"    }\n"
-"    return depth;\n"
-"}\n"
-"vec4 Project(vec4 a) {\n"
-"    return a / a.w;\n"
-"}\n"
-"vec2 GetScreenCoordinate(vec3 posWorld) {\n"
-"    vec2 uv = Project(vWorldToScreen * vec4(posWorld, 1.0)).xy * 0.5 + 0.5;\n"
-"    return uv;\n"
-"}\n"
-"bool RayMarch(vec3 ori, vec3 dir, out vec3 hitPos) {\n"
-"    float step = 0.05;\n"
-"    vec3 endPoint = ori;\n"
-"    for (int i = 0; i < 40; i++) {\n"
-"        vec3 testPoint = endPoint + step * dir;\n"
-"        float testDepth = GetDepth(testPoint);\n"
-"        float bufferDepth = GetGBufferDepth(GetScreenCoordinate(testPoint));\n"
-"        if (step > 40.0) {\n"
-"            return false;\n"
-"        }\n"
-"        else if (testDepth - bufferDepth > 1e-6) {\n"
-"            hitPos = testPoint;\n"
-"            return true;\n"
-"        }\n"
-"        else if (testDepth < bufferDepth) {\n"
-"            endPoint = testPoint;\n"
-"        } else if (testDepth > bufferDepth) {\n"
-"        }\n"
-"    }\n"
-"    return false;\n"
-"}\n"
-"void main() {\n"
-"}\n";
-
-
 
 glm::vec3 lightPositions[] = {
     glm::vec3(-10.0f,  10.0f, 10.0f),
@@ -1441,10 +315,9 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
     //mapShader.setUniform("viewPos", camera->position);
     //shaderList.emplace_back(mapShader);
 
-
     // 4
     GLShader cooktorranceShader;
-    cooktorranceShader.init("cook_torrance_pbr_shader", cookTorranceVertexShader, cookTorranceFragShader);
+    cooktorranceShader.initFromFiles("pbr_shader", "..\\shaders\\normal.vs", "..\\shaders\\pbr.fs");
     cooktorranceShader.bind();
     for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i)
     {
@@ -1459,39 +332,36 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
 
     // 5
     GLShader pbrMapShader;
-    pbrMapShader.init("pbr_map_shader", pbrMapVertexShader, pbrMapFragShader);
+    pbrMapShader.initFromFiles("pbr_map_shader", "..\\shaders\\normal.vs", "..\\shaders\\pbr_map.fs");
     shaderList.emplace_back(pbrMapShader);
 
     // 6
     GLShader cubeMapShader;
-    //cubeMapShader.init("ibl_cube_hdr_map_shader", cubeMapVertexShader, cubeMapFragShader);
-    cubeMapShader.initFromFiles("ibl_cube_hdr_map_shader", "cubemap_vs.txt", "equirectangular_to_cubemap_fs.txt");
+    cubeMapShader.initFromFiles("ibl_hdr_cube_map_shader", "..\\shaders\\cubemap.vs", "..\\shaders\\equirectangular_to_cubemap.fs");
     shaderList.emplace_back(cubeMapShader);
 
     // 7
     GLShader backgroundShader;
-    //backgroundShader.init("simple_skybox_shader", backgroundVertexShader, backgroundFragShader);
-    backgroundShader.initFromFiles("simple_skybox_shader", "background_vs.txt", "background_fs.txt");
+    backgroundShader.initFromFiles("simple_skybox_shader", "..\\shaders\\background.vs", "..\\shaders\\background.fs");
     shaderList.emplace_back(backgroundShader);
 
     // 8
     GLShader hdrboxShader;
-    hdrboxShader.init("test_shader", hdrboxVertexShader, hdrboxFragShader);
+    hdrboxShader.initFromFiles("hdr_box", "..\\shaders\\cube_map.vs", "..\\shaders\\equirectangular_to_cubemap.fs");
     shaderList.emplace_back(hdrboxShader);
 
     // 9
     GLShader irradianceConvolutionShader;
-    //irradianceConvolutionShader.init("irradiance_convolution_shader", cubeMapVertexShader, irradianceConvolutionFragShader);
-    irradianceConvolutionShader.initFromFiles("irradiance_convolution_shader", "cubemap_vs.txt", "irradiance_convolution_fs.txt");
+    irradianceConvolutionShader.initFromFiles("irradiance_convolution_shader", "..\\shaders\\cubemap.vs", "..\\shaders\\irradiance_convolution.fs");
     shaderList.emplace_back(irradianceConvolutionShader);
 
     // 10
-    GLShader diffusePbrShader;
-    diffusePbrShader.init("diffuse_ibl_shader", cookTorranceVertexShader, iblDiffusePbrFragShader);
-    diffusePbrShader.bind();
-    diffusePbrShader.setUniform("ao", 1.0f);
-    diffusePbrShader.setUniform("albedo", vec3(0.0f, 0.5f, 0.0f));
-    shaderList.emplace_back(diffusePbrShader);
+    GLShader diffuseIBLShader;
+    diffuseIBLShader.initFromFiles("diffuse_ibl_shader", "..\\shaders\\normal.vs", "..\\shaders\\ibl_diffuse.fs");
+    diffuseIBLShader.bind();
+    diffuseIBLShader.setUniform("ao", 1.0f);
+    diffuseIBLShader.setUniform("albedo", vec3(0.5f, 0.0f, 0.0f));
+    shaderList.emplace_back(diffuseIBLShader);
 
 
     mat4 lightProjection, lightView;
@@ -1503,7 +373,7 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
 
      // 11
     GLShader shadowDepthShader;
-    shadowDepthShader.init("shadow_map_depth_shader", shadowMappingDepthVertexShader, shadowMappingDepthFragShader);
+    shadowDepthShader.initFromFiles("shadow_map_depth_shader", "..\\shaders\\shadow_map_depth.vs", "..\\shaders\\shadow_map_depth.fs");
     // render scene from light's point of view
     shadowDepthShader.bind();
     shadowDepthShader.setUniform("lightSpaceMatrix", lightSpaceMatrix);
@@ -1511,7 +381,7 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
 
     // 12
     GLShader shadowShader;
-    shadowShader.init("shadow_map_shader", shadowMappingVertexShader, shadowMappingFragShader);
+    shadowShader.initFromFiles("shadow_map_shader", "..\\shaders\\shadow_map.vs", "..\\shaders\\shadow_map.fs");
     shadowShader.bind();
     shadowShader.setUniform("lightPos", vec3(-2.0f, 4.0f, -1.0f));
     shadowShader.setUniform("lightSpaceMatrix", lightSpaceMatrix);
@@ -1519,7 +389,7 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
 
     // 13
     GLShader debugShadowShader;
-    debugShadowShader.init("debug_shadow_shader", shadowDebugVertexShader, shadowDebugFragShader);
+    debugShadowShader.initFromFiles("shadow_debug_shader", "..\\shaders\\shadow_debug.vs", "..\\shaders\\shadow_debug.fs");
     debugShadowShader.bind();
     // 消去输出，需要再加
     //debugShadowShader.setUniform("near_plane", near_plane);
@@ -1529,7 +399,7 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
 
     // 14
     GLShader pcssShader;
-    pcssShader.init("pcss_shadow_shader", pcssVertexShader, pcssFragShader);
+    pcssShader.initFromFiles("pcss_shadow_shader", "..\\shaders\\pcss.vs", "..\\shaders\\pcss.fs");
     pcssShader.bind();
     pcssShader.setUniform("lightPos", vec3(-2.0f, 4.0f, -1.0f));
     pcssShader.setUniform("lightSpaceMatrix", lightSpaceMatrix);
@@ -1537,82 +407,23 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
 
     // 15
     GLShader prefilterShader;
-    //prefilterShader.init("prefilter_color_shader", cubeMapVertexShader, prefilterFragShader);
-    prefilterShader.initFromFiles("prefilter_color_shader", "cubemap_vs.txt", "prefilter_fs.txt");
+    prefilterShader.initFromFiles("prefilter_color_shader", "..\\shaders\\cubemap.vs", "..\\shaders\\prefilter.fs");
     shaderList.emplace_back(prefilterShader);
 
     // 16
     GLShader brdfShader;
-    //brdfShader.init("brdf_sample_shader", brdfVertexShader, brdfFragShader);
-    brdfShader.initFromFiles("brdf_sample_shader", "brdf_vs.txt", "brdf_fs.txt");
+    brdfShader.initFromFiles("brdf_sample_shader", "..\\shaders\\brdf.vs", "..\\shaders\\brdf.fs");
     shaderList.emplace_back(brdfShader);
 
     // 17
     GLShader pbrShader;
-    pbrShader.initFromFiles("pbr_shader", "vertex.txt", "frag.txt");
-    //pbrShader.init("pbr_shader", PBRVertexShader, PBRFragShader);
+    pbrShader.initFromFiles("ibl_shader", "..\\shaders\\normal.vs", "..\\shaders\\ibl.fs");
     shaderList.emplace_back(pbrShader);
 
     // 18
     GLShader pbrmapShader;
-    pbrmapShader.initFromFiles("pbr_map_shader", "vertex.txt", "pbrmap_fs.txt");
+    pbrmapShader.initFromFiles("ibl_map_shader", "..\\shaders\\normal.vs", "..\\shaders\\ibl_map.fs");
     shaderList.emplace_back(pbrmapShader);
-
-    //lightShader.init(
-    //    "light_shader",
-
-    //    "#version 330 core\n"
-    //    "in vec3 position;\n"
-    //    "uniform mat4 lightMVP;\n"
-    //    "void main() {\n"
-    //    "   gl_Position = lightMVP * vec4(position, 1.0);\n"
-    //    "}\n",
-
-    //    "#version 330 core\n"
-    //    "out vec4 FragColor;\n"
-
-    //    "void main() {\n"
-    //    "   FragColor = vec4(1.0);\n"
-    //    "}\n"
-    //);
-
-    //MatrixXu indices(3, 12); /* Draw a cube */
-    //indices.col(0) << 0, 1, 3;
-    //indices.col(1) << 3, 2, 1;
-    //indices.col(2) << 3, 2, 6;
-    //indices.col(3) << 6, 7, 3;
-    //indices.col(4) << 7, 6, 5;
-    //indices.col(5) << 5, 4, 7;
-    //indices.col(6) << 4, 5, 1;
-    //indices.col(7) << 1, 0, 4;
-    //indices.col(8) << 4, 0, 3;
-    //indices.col(9) << 3, 7, 4;
-    //indices.col(10) << 5, 6, 2;
-    //indices.col(11) << 2, 1, 5;
-
-    //MatrixXf positions(3, 8);
-    //positions.col(0) << 2, 3, 3;
-    //positions.col(1) << 2, 3, 2;
-    //positions.col(2) << 3, 3, 2;
-    //positions.col(3) << 3, 3, 3;
-    //positions.col(4) << 2, 2, 3;
-    //positions.col(5) << 2, 2, 2;
-    //positions.col(6) << 3, 2, 2;
-    //positions.col(7) << 3, 2, 3;
-
-    //MatrixXf colors(3, 12);
-    //colors.col(0) << 1, 0, 0;
-    //colors.col(1) << 0, 1, 0;
-    //colors.col(2) << 1, 1, 0;
-    //colors.col(3) << 0, 0, 1;
-    //colors.col(4) << 1, 0, 1;
-    //colors.col(5) << 0, 1, 1;
-    //colors.col(6) << 1, 1, 1;
-    //colors.col(7) << 0.5, 0.5, 0.5;
-    //colors.col(8) << 1, 0, 0.5;
-    //colors.col(9) << 1, 0.5, 0;
-    //colors.col(10) << 0.5, 1, 0;
-    //colors.col(11) << 0.5, 1, 0.5;
     
 
     //camera->cameraPos = vec3(0.0f, 0.0f, 3.0f);
@@ -1631,10 +442,6 @@ MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) :
  /*   mShader.uploadIndices(indices);
     mShader.uploadAttrib("position", positions);
     mShader.uploadAttrib("color", colors);*/
-
-    //lightShader.bind();
-    //lightShader.uploadIndices(indices);
-    //lightShader.uploadAttrib("position", positions);
 }
 
 void MyGLCanvas::drawGL() {
@@ -1653,7 +460,7 @@ void MyGLCanvas::drawGL() {
             updateCamera();
             view = lookAt(camera->position, camera->target, camera->up);
             projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
-
+            std::cout << "gaa" << std::endl;
             for (int i = 0; i < modelList.size(); i++) {
                 model[0][0] = 1.0f;
                 model[0][1] = 0.0f;
@@ -1680,27 +487,18 @@ void MyGLCanvas::drawGL() {
                 shaderList[modelList[i]->shaderIndex].setUniform("viewPos", camera->position);
                 shaderList[modelList[i]->shaderIndex].setUniform("roughness", modelList[i]->roughenss);
                 shaderList[modelList[i]->shaderIndex].setUniform("metallic", modelList[i]->metallic);
-                //glEnable(GL_DEPTH_TEST);
                 modelList[i]->draw(shaderList[modelList[i]->shaderIndex]);
-                //glDisable(GL_DEPTH_TEST);
             }
-            //lightShader.bind();
-            //lightShader.setUniform("lightMVP", projection * view);
-            //glEnable(GL_DEPTH_TEST);
-            /* Draw 12 triangles starting at index 0 */
-            //mShader.drawIndexed(GL_TRIANGLES, 0, 12);
-            //lightShader.drawIndexed(GL_TRIANGLES, 0, 12);
-            //glDisable(GL_DEPTH_TEST);
         }
     }
     else if (preload == PBRMAPBALLS) {
         glEnable(GL_DEPTH_TEST);
         preloadPbrMapBalls();
     }
-    else if (preload == DIFFUSEIRRADIANCE) {
+    else if (preload == DIFFUSEIBL) {
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LEQUAL);
-        preloadDiffuseIrradiance();
+        preloadDiffuseIBL();
     }
     else if (preload == SHADOWMAPPING) {
         glEnable(GL_DEPTH_TEST);
@@ -1710,21 +508,17 @@ void MyGLCanvas::drawGL() {
         glEnable(GL_DEPTH_TEST);
         preloadPCSS();
     }
-    else if (preload == PBR) {
+    else if (preload == IBL_BALLS) {
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LEQUAL);
         glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-        preloadPBRBalls();
+        preloadIBLBalls();
     }
-    else if (preload == PBR_MAP) {
+    else if (preload == IBL_MAPBALLS) {
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LEQUAL);
         glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
         preloadIBLMapBalls();
-    }
-    else if (preload == RAY_MARCHING) {
-        glEnable(GL_DEPTH_TEST);
-        preloadRayMarching();
     }
 }
 
@@ -1807,16 +601,6 @@ Model* MyGLCanvas::firstModel() {
 
 void MyGLCanvas::preloadNPR() {
 
-}
-
-void MyGLCanvas::preloadRayMarching() {
-}
-
-void MyGLCanvas::preloadSDFShadow() {
-    if (!init) {
-
-        init = true;
-    }
 }
 
 const unsigned int SHADOW_WIDTH = 2048, SHADOW_HEIGHT = 2048;
@@ -2107,7 +891,7 @@ void MyGLCanvas::preloadPbrMapBalls() {
 
 unsigned int envCubeMap;
 unsigned int irradianceMap;
-void MyGLCanvas::preloadDiffuseIrradiance() {
+void MyGLCanvas::preloadDiffuseIBL() {
     if (!init) {
         shaderList[7].bind();
         shaderList[7].setUniform("environmentMap", 0);
@@ -2237,85 +1021,20 @@ void MyGLCanvas::preloadDiffuseIrradiance() {
     view = lookAt(camera->position, camera->target, camera->up);
     projection = glm::perspective(camera->fov, camera->aspect, 0.1f, 100.0f);
 
-    //shaderList[8].bind();
-    //shaderList[8].setUniform("testMap", 0);
-    //shaderList[8].setUniform("projection", projection);
-    //shaderList[8].setUniform("view", view);
-    //stbi_set_flip_vertically_on_load(true);
-    //int width, height, nrComponents;
-    //float* data = stbi_loadf("..\\models\\HDR\\Newport_Loft\\Newport_Loft_Ref.hdr", &width, &height, &nrComponents, 0);
-    //unsigned int hdrTexture;
-    //if (data)
-    //{
-    //    glGenTextures(1, &hdrTexture);
-    //    glBindTexture(GL_TEXTURE_2D, hdrTexture);
-    //    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data);
-
-    //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    //    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    //    stbi_image_free(data);
-    //}
-    //else
-    //{
-    //    std::cout << "Failed to load HDR image." << std::endl;
-    //}
-    //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    //glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    //renderCube();
-
-    //shaderList[4].bind();
-    //shaderList[4].setUniform("view", view);
-    //shaderList[4].setUniform("projection", projection);
-    //shaderList[4].setUniform("viewPos", camera->position);
-    //for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i)
-    //{
-    //    glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
-    //    shaderList[4].setUniform("lightPosition[" + std::to_string(i) + "]", newPos);
-    //    shaderList[4].setUniform("lightColors[" + std::to_string(i) + "]", lightColors[i]);
-    //}
-    //// render rows*column number of spheres with varying metallic/roughness values scaled by rows and columns respectively
-    //glm::mat4 model = glm::mat4(1.0f);
-    //for (int row = 0; row < nrRows; ++row)
-    //{
-    //    shaderList[4].setUniform("metallic", (float)row / (float)nrRows);
-    //    for (int col = 0; col < nrColumns; ++col)
-    //    {
-    //        // we clamp the roughness to 0.025 - 1.0 as perfectly smooth surfaces (roughness of 0.0) tend to look a bit off
-    //        // on direct lighting.
-    //        shaderList[4].setUniform("roughness", glm::clamp((float)col / (float)nrColumns, 0.05f, 1.0f));
-    //        model = glm::mat4(1.0f);
-    //        model = glm::translate(model, glm::vec3(
-    //            (float)(col - (nrColumns / 2)) * spacing,
-    //            (float)(row - (nrRows / 2)) * spacing,
-    //            -2.0f
-    //        ));
-    //        shaderList[4].setUniform("model", model);
-    //        renderSphere();
-    //    }
-    //}
-
     shaderList[10].bind();
     shaderList[10].setUniform("view", view);
     shaderList[10].setUniform("projection", projection);
     shaderList[10].setUniform("viewPos", camera->position);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceMap);
-    for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i)
-    {
+    for (unsigned int i = 0; i < sizeof(lightPositions) / sizeof(lightPositions[0]); ++i) {
         glm::vec3 newPos = lightPositions[i] + glm::vec3(sin(glfwGetTime() * 5.0) * 5.0, 0.0, 0.0);
         shaderList[10].setUniform("lightPosition[" + std::to_string(i) + "]", newPos);
         shaderList[10].setUniform("lightColors[" + std::to_string(i) + "]", lightColors[i]);
     }
     // render rows*column number of spheres with varying metallic/roughness values scaled by rows and columns respectively
     glm::mat4 model = glm::mat4(1.0f);
-    for (int row = 0; row < nrRows; ++row)
-    {
+    for (int row = 0; row < nrRows; ++row) {
         shaderList[10].setUniform("metallic", (float)row / (float)nrRows);
         for (int col = 0; col < nrColumns; ++col)
         {
@@ -2345,7 +1064,7 @@ void MyGLCanvas::preloadDiffuseIrradiance() {
 unsigned int prefilterMap;
 unsigned int brdfLUTTexture;
 
-void MyGLCanvas::preloadPBRBalls() {
+void MyGLCanvas::preloadIBLBalls() {
     if (!init) {
         shaderList[17].bind();
         shaderList[17].setUniform("irradianceMap", 0);

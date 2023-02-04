@@ -82,17 +82,16 @@ enum LightShapeEnum {
 enum PreLoadEnum {
     PRELOAD_NONE = 0,
     PBRMAPBALLS,
-    DIFFUSEIRRADIANCE,
+    DIFFUSEIBL,
     SHADOWMAPPING,
     PCSS,
-    PBR,
-    PBR_MAP,
-    SDF_SHADOW,
-    RAY_MARCHING
+    IBL_BALLS,
+    IBL_MAPBALLS,
 };
 
 enum ShaderStyleEnum {
-    NPR = 0
+    SHADER_STYLE_NONE = 0,
+    NPR
 };
 
 typedef struct Config {

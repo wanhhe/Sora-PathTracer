@@ -73,34 +73,15 @@ void Mesh::draw(nanogui::GLShader shader) {
     }
     glActiveTexture(GL_TEXTURE0);
 
-    // 绘制网格
-    glBindVertexArray(VAO);
     //if (shader.uniform("bump", true)) shader.setUniform("bump", 1);
     //else shader.setUniform("bump", 0);
     //if (specularNr > 1) shader.setUniform("sepmap", 1);
     //else shader.setUniform("sepmap", 0);
-    if (!isFace) {
-        // 如果不是脸就不需要进行模板值写入，所以要关闭模板写入
-        //if (isHair) return;
-        //glStencilFunc(GL_ALWAYS, 0, 0xFF);
-        //glStencilMask(0x00);
-        shader.setUniform("_isFace", false);
-        if (isHair) {
-            shader.setUniform("_isHair", true);
-        }
-        else {
-            shader.setUniform("_isHair", false);
-        }
-        glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
-    }
-    else {
-        //glStencilFunc(GL_ALWAYS, 1, 0xFF);
-        //glStencilMask(0xFF);
-        shader.setUniform("_isFace", true);
-        glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
-    }
+        // 绘制网格
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+
 }
 
 void Mesh::drawHairShadow(nanogui::GLShader shader) {
