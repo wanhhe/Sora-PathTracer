@@ -4,7 +4,7 @@ in vec3 FragPos;
 in vec3 Normal;
 in vec2 TexCoords;
 
-uniform sampler2D ilmTexture;
+uniform sampler2D ilmTexture1;
 uniform sampler2D texture_diffuse1;
 
 uniform vec3 lightPos;
@@ -28,7 +28,7 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0) {
 
 void main() {
    vec3 diffuseTex = texture(texture_diffuse1, TexCoords).rgb;
-   vec3 ilmTex = texture(ilmTexture, TexCoords).rgb;
+   vec3 ilmTex = texture(ilmTexture1, TexCoords).rgb;
    vec3 normal = normalize(Normal);
    vec3 lightDir = normalize(lightPos - FragPos);
    vec3 viewDir = normalize(viewPos - FragPos);

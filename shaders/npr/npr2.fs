@@ -5,7 +5,7 @@ in vec3 Normal;
 in vec2 TexCoords;
 in vec4 lightFragPos;
 
-uniform sampler2D ilmTexture;
+uniform sampler2D ilmTexture1;
 uniform sampler2D texture_diffuse1;
 uniform sampler2D sdfMap;
 uniform sampler2D hairLightTexture;
@@ -27,7 +27,7 @@ uniform float _ShadowAttWeight;
 uniform float _Atten;
 uniform float _DividLineH;
 uniform float _DividLineM;
-uniform float _DiviedLineD;
+uniform float _DividLineD;
 uniform float _BoundSharp;
 
 float sigmoid(float x, float center, float sharp) {
@@ -36,7 +36,7 @@ float sigmoid(float x, float center, float sharp) {
 
 void main() {
    vec3 color = texture(texture_diffuse1, TexCoords).rgb;
-   vec3 ilmTex = texture(ilmTexture, TexCoords).rgb;
+   vec3 ilmTex = texture(ilmTexture1, TexCoords).rgb;
    vec3 normal = normalize(Normal);
    if(!gl_FrontFacing) normal = -normal;
    vec3 viewDir = normalize(viewPos - FragPos);
@@ -48,7 +48,7 @@ void main() {
    float NoL = dot(normal, lightDir) + _ShadowAttWeight * (_Atten - 1);
    float HLightSig = sigmoid(NoL, _DividLineH, _BoundSharp);
    float MidSig = sigmoid(NoL, _DividLineM, _BoundSharp);
-   float DarkSig = sigmoid(NoL, _DiviedLineD, _BoundSharp);
+   float DarkSig = sigmoid(NoL, _DividLineD, _BoundSharp);
    float HLightWin = HLightSig;
    float MidLWin = MidSig - HLightSig;
    float MidDWin = DarkSig - MidSig;

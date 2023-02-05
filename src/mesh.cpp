@@ -64,7 +64,7 @@ void Mesh::draw(nanogui::GLShader shader) {
             number = std::to_string(normalNr);
             normalNr++;
         }
-        else if (name == "texture_emission") {
+        else if (name == "ilmTexture") {
             number = std::to_string(emissionNr);
             emissionNr++;
         }
@@ -166,11 +166,13 @@ void Mesh::drawFaceStencil(nanogui::GLShader& shader) {
     if (isFace) {
         glStencilFunc(GL_ALWAYS, 128, 0xFF);
         glStencilMask(0xFF);
+        shader.setUniform("_IsFace", 1.0);
     }
     else {
         //glStencilMask(0x00);
         glStencilFunc(GL_ALWAYS, 0, 0xFF);
         glStencilMask(0xFF);
+        shader.setUniform("_IsFace", 0.0);
     }
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);

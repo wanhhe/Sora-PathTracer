@@ -4,7 +4,7 @@ in vec3 FragPos;
 in vec3 Normal;
 in vec2 TexCoords;
 
-uniform sampler2D ilmTexture;
+uniform sampler2D ilmTexture1;
 uniform sampler2D texture_diffuse1;
 uniform sampler2D sdfMap;
 uniform sampler2D hairLightTexture;
@@ -66,7 +66,7 @@ vec3 FresnelExtend(float VoN, vec3 F0) {
 
 void main() {
    vec3 color = texture(texture_diffuse1, TexCoords).rgb;
-   vec3 ilmTex = texture(ilmTexture, TexCoords).rgb;
+   vec3 ilmTex = texture(ilmTexture1, TexCoords).rgb;
    vec3 normal = normalize(Normal);
    if(!gl_FrontFacing) normal = -normal;
    vec3 viewDir = normalize(viewPos - FragPos);

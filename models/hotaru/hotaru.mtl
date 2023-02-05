@@ -30,6 +30,7 @@ Ni 1.450000
 d 1.000000
 illum 1
 map_Kd Texture/hair.png
+map_Ke Texture/Avatar_Girl_Sword_PlayerGirl_Tex_Hair_Lightmap.png
 
 newmtl m11.004
 Ns 4.999998
@@ -40,6 +41,7 @@ Ni 1.450000
 d 1.000000
 illum 1
 map_Kd Texture/clothes.png
+map_Ke Texture/Avatar_Girl_Sword_PlayerGirl_Tex_Body_Lightmap.png
 
 newmtl m12.004
 Ns 102.500008
@@ -50,6 +52,7 @@ Ni 1.450000
 d 1.000000
 illum 1
 map_Kd Texture/clothes.png
+map_Ke Texture/Avatar_Girl_Sword_PlayerGirl_Tex_Body_Lightmap.png
 
 newmtl m13.004
 Ns 4.999998
@@ -60,6 +63,7 @@ Ni 1.450000
 d 1.000000
 illum 1
 map_Kd Texture/clothes.png
+map_Ke Texture/Avatar_Girl_Sword_PlayerGirl_Tex_Body_Lightmap.png
 
 newmtl m14.004
 Ns 4.999998
@@ -70,6 +74,7 @@ Ni 1.450000
 d 1.000000
 illum 1
 map_Kd Texture/clothes.png
+map_Ke Texture/Avatar_Girl_Sword_PlayerGirl_Tex_Body_Lightmap.png
 
 newmtl m15.004
 Ns 4.999998
@@ -80,6 +85,7 @@ Ni 1.450000
 d 1.000000
 illum 1
 map_Kd Texture/clothes.png
+map_Ke Texture/Avatar_Girl_Sword_PlayerGirl_Tex_Body_Lightmap.png
 
 newmtl m16.004
 Ns 4.999998
@@ -90,6 +96,7 @@ Ni 1.450000
 d 1.000000
 illum 1
 map_Kd Texture/clothes.png
+map_Ke Texture/Avatar_Girl_Sword_PlayerGirl_Tex_Body_Lightmap.png
 
 newmtl m17.004
 Ns 4.999998
@@ -100,6 +107,7 @@ Ni 1.450000
 d 1.000000
 illum 1
 map_Kd Texture/skin.png
+map_Ke Texture/Avatar_Girl_Sword_PlayerGirl_Tex_Body_Lightmap.png
 
 newmtl m18.004
 Ns 102.500008
@@ -200,3 +208,4 @@ Ni 1.450000
 d 1.000000
 illum 1
 map_Kd Texture/hair.png
+map_Ke Texture/Avatar_Girl_Sword_PlayerGirl_Tex_Hair_Lightmap.png

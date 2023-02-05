@@ -4,7 +4,7 @@ in vec3 FragPos;
 in vec3 Normal;
 in vec2 TexCoords;
 
-uniform sampler2D ilmTexture;
+uniform sampler2D ilmTexture1;
 uniform sampler2D texture_diffuse1;
 uniform sampler2D sdfMap;
 
@@ -19,9 +19,10 @@ uniform vec3 _RimColor;
 uniform float _RimAmount;
 uniform float _MinRim;
 uniform float _MaxRim;
+uniform float _IsFace;
 void main() {
    vec3 color = texture(texture_diffuse1, TexCoords).rgb;
-   vec3 ilmTex = texture(ilmTexture, TexCoords).rgb;
+   vec3 ilmTex = texture(ilmTexture1, TexCoords).rgb;
    vec3 normal = normalize(Normal);
    if(!gl_FrontFacing) normal = -normal;
    vec3 viewDir = normalize(viewPos - FragPos);
@@ -29,7 +30,7 @@ void main() {
    float NdotL = max(dot(normal, lightDir), 0);
    float wrapLambert = NdotL + ilmTex.g;
    float shadowStep = smoothstep(0.9, 0.95, wrapLambert);
-   vec3 shadow = mix(_AmbientColor, _LightColor, shadowStep);
+   // vec3 diffuseShadow = mix(_AmbientColor, _LightColor, shadowStep);
    vec3 halfwayDir = normalize(lightDir + viewDir);
    float spec = pow(max(dot(normal, halfwayDir), 0), 128);
    float specularRange = step(_SpecularRange, (spec + clamp(dot(normal.xz, lightDir.xz), 0.0, 1.0)) * ilmTex.r * ilmTex.b);
@@ -48,7 +49,11 @@ void main() {
    vec3 Right = -Left;
    float ctrl = step(0, dot(Front.xz, lightDir.xz));
    float faceShadow = ctrl * min(step(dot(Left.xz, lightDir.xz), r_sdfIlm.r), step(dot(Right.xz, lightDir.xz), sdfIlm.r));
-   vec3 diffuse = mix(_AmbientColor, _LightColor, faceShadow);
+   // 如果是脸的话就是1，身体就是0，然后乘
+   float isFace = step(0, _IsFace);
+   float shadow = isFace * faceShadow + (1.0 - isFace) * shadowStep;
+   // vec3 diffuse = mix(_AmbientColor, _LightColor, faceShadow);
+   vec3 diffuse = mix(_AmbientColor, _LightColor, shadow);
 //"   float ctrl = 1 - clamp(dot(Front, lightDir) * 0.5 + 0.5, 0.0, 1.0);
 //"   float ilm = dot(lightDir, Left) > 0 ? sdfIlm.r : r_sdfIlm.r;
 //"   float isShadow = step(ilm, ctrl);

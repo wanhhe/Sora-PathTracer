@@ -125,16 +125,9 @@ const string faceFragShader =
 
 NPRShader::NPRShader() {
     model = new Model("..\\models\\hotaru\\hotaru.obj", "hotaru");
-    bodyLightMap = loadTexture("..\\models\\hotaru\\Texture\\Avatar_Girl_Sword_PlayerGirl_Tex_Body_Lightmap.png");
-    hairLightMap = loadTexture("..\\models\\hotaru\\Texture\\Avatar_Girl_Sword_PlayerGirl_Tex_Hair_Lightmap.png");
-    hairSpecularMap = loadTexture("..\\models\\hotaru\\Texture\\sp.png");
     sdfMap = loadTexture("..\\models\\hotaru\\Texture\\wow.png");
-    glActiveTexture(GL_TEXTURE10);
-    glBindTexture(GL_TEXTURE_2D, bodyLightMap);
     glActiveTexture(GL_TEXTURE11);
     glBindTexture(GL_TEXTURE_2D, sdfMap);
-    glActiveTexture(GL_TEXTURE12);
-    glBindTexture(GL_TEXTURE_2D, hairLightMap);
     glActiveTexture(GL_TEXTURE0);
     //lightPos = vec3(2, 4, 0);
     lightPos = vec3(0 ,0, -3);
@@ -143,7 +136,6 @@ NPRShader::NPRShader() {
 
 
     shader.initFromFiles("npr_shader", "..\\shaders\\npr\\normal.vs", "..\\shaders\\npr\\npr1.fs");
-    //shader.init("npr_shader", nprVertexShader, nprFragShader);
     shader.bind();
     mat4 model(1.0);
     model = glm::translate(model, vec3(0.0));
@@ -154,7 +146,6 @@ NPRShader::NPRShader() {
     shader.setUniform("_LightColor", lightColor);
     shader.setUniform("_SpecularColor", vec3(0.9));
     shader.setUniform("_SpecularRange", 0.7);
-    shader.setUniform("ilmTexture", 10);
     shader.setUniform("sdfMap", 11);
     shader.setUniform("_RimColor", vec3(0.949, 0.624, 0.247));
     shader.setUniform("_RimAmount", 0.9);
@@ -164,10 +155,7 @@ NPRShader::NPRShader() {
 
     shader2.initFromFiles("npr_shader2", "..\\shaders\\npr\\normal.vs", "..\\shaders\\npr\\npr2.fs");
     shader2.bind();
-    shader2.setUniform("ilmTexture", 10);
     shader2.setUniform("sdfMap", 11);
-    shader2.setUniform("hairLightTexture", 12);
-
     shader2.setUniform("lightPos", lightPos);
     shader2.setUniform("_AmbientColor", ambientColor);
     shader2.setUniform("_LightColor", lightColor);
@@ -181,22 +169,20 @@ NPRShader::NPRShader() {
     shader2.setUniform("_RimBloomExp", 4.0);
     shader2.setUniform("_ShadowAttWeight", 0.3);
     shader2.setUniform("_Atten", 0.3);
-    shader2.setUniform("_DividLineH", 0.6);
-    shader2.setUniform("_DividLineM", 0.0);
-    shader2.setUniform("_DividLineD", -0.5);
-    shader2.setUniform("_BoundSharp", 0.6);
+    shader2.setUniform("_DividLineH", 1.0);
+    shader2.setUniform("_DividLineM", 0.6);
+    shader2.setUniform("_DividLineD", 0.0);
+    shader2.setUniform("_BoundSharp", 0.2);
     shader2.setUniform("model", model);
 
 
-    shader3.initFromFiles("pnr_shader3", "..\\shaders\\npr\\normal.vs", "..\\shaders\\npr\\npr3.fs");
+    shader3.initFromFiles("npr_shader3", "..\\shaders\\npr\\normal.vs", "..\\shaders\\npr\\npr3.fs");
     shader3.bind();
     shader3.setUniform("lightPos", lightPos);
     shader3.setUniform("_AmbientColor", ambientColor);
     shader3.setUniform("_LightColor", lightColor);
     shader3.setUniform("_SpecularRange", 0.7);
-    shader3.setUniform("ilmTexture", 10);
     shader3.setUniform("sdfMap", 11);
-    shader3.setUniform("hairLightTexture", 12);
     shader3.setUniform("_RimColor", vec3(0.949, 0.624, 0.247));
     shader3.setUniform("_RimAmount", 0.9);
     shader3.setUniform("_MinRim", 0.65);
@@ -223,7 +209,6 @@ NPRShader::NPRShader() {
     shader4.bind();
     shader4.setUniform("model", model);
     shader4.setUniform("lightPos", lightPos);
-    shader4.setUniform("ilmTexture", 10);
     shader4.setUniform("_MainColor", vec3(1.0));
     shader4.setUniform("_ShadowColor", vec3(0.7, 0.7, 0.8));
     shader4.setUniform("_ShadowRange", 0.5);
@@ -280,10 +265,7 @@ NPRShader::NPRShader() {
     bangsShadowShader.bind();
     bangsShadowShader.setUniform("model", model);
     bangsShadowShader.setUniform("lightPos", lightPos);
-    bangsShadowShader.setUniform("ilmTexture", 10);
     bangsShadowShader.setUniform("sdfMap", 11);
-    bangsShadowShader.setUniform("hairLightTexture", 12);
-    bangsShadowShader.setUniform("hairShadowMap", 8);
     bangsShadowShader.setUniform("_MainColor", vec3(1.0));
     bangsShadowShader.setUniform("_ShadowColor", vec3(0.7, 0.7, 0.8));
     bangsShadowShader.setUniform("_ShadowRange", 0.5);
@@ -333,13 +315,13 @@ void NPRShader::draw(const mat4& view, const mat4& projection, const vec3& viewP
     //lastFaceShader.setUniform("lightPos", newPos);
     //lastFaceShader.setUniform("aLightPos", newPos);
     //model->drawFaceStencil(lastFaceShader);
-    shader4.bind();
-    shader4.setUniform("view", view);
-    shader4.setUniform("projection", projection);
-    shader4.setUniform("viewPos", viewPos);
+    shader.bind();
+    shader.setUniform("view", view);
+    shader.setUniform("projection", projection);
+    shader.setUniform("viewPos", viewPos);
     glm::vec3 newPos = lightPos + glm::vec3(sin(glfwGetTime() * 0.4) * 8.0, 0.0, 0.0);
-    shader4.setUniform("lightPos", newPos);
-    model->drawFaceStencil(shader4);
+    shader.setUniform("lightPos", newPos);
+    model->drawFaceStencil(shader);
     //// 然后画头发的阴影，如果模板值正确就画上脸 (再标记模板值)
     bangsShadowStencilShader.bind();
     bangsShadowStencilShader.setUniform("view", view);

@@ -84,7 +84,7 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 	vector<Texture> textures;
 	bool isFace = false;
 	bool isHair = false;
-	std::cout << "s " << mesh->mName.C_Str() << std::endl;
+	std::cout << mesh->mName.C_Str() << std::endl;
 	for (int i = 0; i < 9; i++) {
 		string name = "m" + std::to_string(i);
 		//std::cout << name << std::endl;
@@ -96,13 +96,9 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 	}
 	if (!strcmp(mesh->mName.C_Str(), "hotaru")) {
 		isFace = true;
-		std::cout << "laina sfasdfsfasdfssdfdsaa" << std::endl;
-	} else {
-		std::cout << mesh->mName.C_Str() << std::endl;
-	}
+	} 
 	string name = "m";
 	if (mesh->mName.C_Str() == name + "9.004") isHair = true;
-	//if (mesh->mName.C_Str() == name + "9.004") isHair = true;
 	
 	for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
 		Vertex vertex;
@@ -151,7 +147,7 @@ Mesh Model::processMesh(aiMesh* mesh, const aiScene* scene) {
 		vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
 		textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
 		vector<Texture> emissionMaps = loadMaterialTextures(material, aiTextureType_EMISSIVE, "texture_emission");
-		//if (emissionMaps.size() > 0) std::cout << "load" << std::endl;
+		if (emissionMaps.size() > 0) std::cout << "load" << std::endl;
 		textures.insert(textures.end(), emissionMaps.begin(), emissionMaps.end());
 	}
 	return Mesh(vertices, indices, textures, isFace, isHair);
