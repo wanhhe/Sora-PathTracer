@@ -34,6 +34,7 @@ uniform vec3 _DeepDarkColor;
 uniform vec3 _DiffuseBright;
 uniform vec3 _FresnelColor;
 uniform float _FresnelEff;
+uniform float _IsFace;
 
 float sigmoid(float x, float center, float sharp) {
    return 1 / (1 + pow(10000, -3 * sharp * (x - center)));
@@ -79,8 +80,6 @@ void main() {
    float NoV = dot(normal, viewDir);
    float VoL = dot(viewDir, lightDir);
    float wrapLambert = NdotL + ilmTex.g;
-   float shadowStep = smoothstep(0.9, 0.95, wrapLambert);
-   vec3 shadow = mix(_AmbientColor, _LightColor, shadowStep);
    float roughness = 0.95 - 0.95 * ilmTex.r * _Glossiness;
    float boundSharp = 9.5 * pow(roughness - 1, 2) + 0.5;
    vec3 fresnel = FresnelExtend(NoV, vec3(0.1));
@@ -101,8 +100,28 @@ void main() {
    diffuseWeight += vec3(MidDWin * (ndc2Normal(_DividLineM) + ndc2Normal(_DividLineD)) / 2.0) * _DarkFaceColor * 3 / (_DarkFaceColor.r + _DarkFaceColor.g + _DarkFaceColor.b);
    diffuseWeight += vec3(DarkWin * ndc2Normal(_DividLineD)) * _DeepDarkColor * 3 / (_DeepDarkColor.r + _DeepDarkColor.g + _DeepDarkColor.b);
    diffuseWeight = warp(diffuseWeight, _DiffuseBright.xxx);
-   vec3 diffuse = diffuseWeight * color;
+
+   vec4 sdfIlm = texture(sdfMap, TexCoords);
    vec3 Front = vec3(0, 0, -1.0);
+   vec4 r_sdfIlm = texture(sdfMap, vec2(1 - TexCoords.x, TexCoords.y));
+   vec3 Left = normalize(vec3(1,0,0));
+   vec3 Right = -Left;
+   float ctrl = step(0, dot(Front.xz, lightDir.xz));
+   float faceShadow = ctrl * min(step(dot(Left.xz, lightDir.xz), r_sdfIlm.r), step(dot(Right.xz, lightDir.xz), sdfIlm.r));
+   // 如果是脸的话就是1，身体就是0，然后乘
+   float isFace = step(0.1, _IsFace);
+   vec3 shadow = isFace * faceShadow * _DeepDarkColor + (1.0 - isFace) * diffuseWeight;
+   // vec3 diffuse = mix(_AmbientColor, _LightColor, faceShadow);
+   // vec3 diffuse = mix(_AmbientColor, _LightColor, shadow);
+//"   float ctrl = 1 - clamp(dot(Front, lightDir) * 0.5 + 0.5, 0.0, 1.0);
+//"   float ilm = dot(lightDir, Left) > 0 ? sdfIlm.r : r_sdfIlm.r;
+//"   float isShadow = step(ilm, ctrl);
+//"   float bias = smoothstep(0.6, 0.8, abs(ctrl - ilm));
+//"   vec3 diffuse = color;
+//"   if (ctrl > 0.99 || isShadow == 1) diffuse = mix_LightColor, _AmbientColor ,bias);
+//"   vec3 lighting = rimColor + (shadow + specular) * color;
+   vec3 diffuse = shadow * color;
+
    float f = 1.0 - clamp(dot(viewDir, normal), 0.0, 1.0);
    float rim = smoothstep(_MinRim, _MaxRim, f);
    rim = smoothstep(0, _RimAmount, rim);

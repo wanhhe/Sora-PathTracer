@@ -13,13 +13,19 @@ uniform vec3 viewPos;
 
 uniform vec3 _AmbientColor;
 uniform vec3 _LightColor;
+uniform float _ShadowEdge0;
+uniform float _ShadowEdge1;
 uniform vec3 _SpecularColor;
 uniform float _SpecularRange;
+uniform float _SpecularGloss;
 uniform vec3 _RimColor;
 uniform float _RimAmount;
 uniform float _MinRim;
 uniform float _MaxRim;
 uniform float _IsFace;
+uniform float _RimBloomExp;
+uniform float _Bloom;
+
 void main() {
    vec3 color = texture(texture_diffuse1, TexCoords).rgb;
    vec3 ilmTex = texture(ilmTexture1, TexCoords).rgb;
@@ -29,11 +35,10 @@ void main() {
    vec3 lightDir = normalize(lightPos - FragPos);
    float NdotL = max(dot(normal, lightDir), 0);
    float wrapLambert = NdotL + ilmTex.g;
-   float shadowStep = smoothstep(0.9, 0.95, wrapLambert);
+   float shadowStep = smoothstep(_ShadowEdge0, _ShadowEdge1, wrapLambert);
    // vec3 diffuseShadow = mix(_AmbientColor, _LightColor, shadowStep);
    vec3 halfwayDir = normalize(lightDir + viewDir);
-   float spec = pow(max(dot(normal, halfwayDir), 0), 128);
-   // 面部不需要高光
+   float spec = pow(max(dot(normal, halfwayDir), 0), _SpecularGloss);
    float specularRange = step(_SpecularRange, (spec + clamp(dot(normal.xz, lightDir.xz), 0.0, 1.0)) * ilmTex.r * ilmTex.b);
    vec3 specular = specularRange * _SpecularColor;
    vec3 Front = vec3(0, 0, -1.0);
@@ -63,7 +68,15 @@ void main() {
 //"   if (ctrl > 0.99 || isShadow == 1) diffuse = mix_LightColor, _AmbientColor ,bias);
 //"   vec3 lighting = rimColor + (shadow + specular) * color;
    vec3 lighting = (rimColor + diffuse + specular) * color;
-   FragColor = vec4(lighting , 1.0);
+   float rimBloom;
+   float f = 1.0 - clamp(dot(viewDir, normal), 0.0, 1.0);
+// 背光直接是1， 不背光
+   if (dot(normal, lightDir) < 0.2 || f < 0.6) {
+       rimBloom = 1.0;
+   } else {
+       rimBloom = pow(f, _RimBloomExp) * _Bloom * dot(normal, lightDir);
+   }
+   FragColor = vec4(lighting , rimBloom);
    // if (ilmTex.g == 0.0) FragColor = vec4(1.0);
 //"   FragColor = vec4(mix(_AmbientColor, _LightColor, shadowStep), 1.0);
 //"   FragColor = vec4(specular, 1.0);
