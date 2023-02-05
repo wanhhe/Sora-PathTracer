@@ -154,7 +154,7 @@ void Mesh::drawFaceStencil(nanogui::GLShader& shader) {
             number = std::to_string(normalNr);
             normalNr++;
         }
-        else if (name == "texture_emission") {
+        else if (name == "ilmTexture") {
             number = std::to_string(emissionNr);
             emissionNr++;
         }
@@ -215,7 +215,7 @@ void Mesh::drwaFaceAfterSampleHairShadowStencil(nanogui::GLShader& shader) {
             number = std::to_string(normalNr);
             normalNr++;
         }
-        else if (name == "texture_emission") {
+        else if (name == "ilmTexture") {
             number = std::to_string(emissionNr);
             emissionNr++;
         }

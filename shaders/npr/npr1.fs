@@ -33,6 +33,7 @@ void main() {
    // vec3 diffuseShadow = mix(_AmbientColor, _LightColor, shadowStep);
    vec3 halfwayDir = normalize(lightDir + viewDir);
    float spec = pow(max(dot(normal, halfwayDir), 0), 128);
+   // 面部不需要高光
    float specularRange = step(_SpecularRange, (spec + clamp(dot(normal.xz, lightDir.xz), 0.0, 1.0)) * ilmTex.r * ilmTex.b);
    vec3 specular = specularRange * _SpecularColor;
    vec3 Front = vec3(0, 0, -1.0);
@@ -50,7 +51,7 @@ void main() {
    float ctrl = step(0, dot(Front.xz, lightDir.xz));
    float faceShadow = ctrl * min(step(dot(Left.xz, lightDir.xz), r_sdfIlm.r), step(dot(Right.xz, lightDir.xz), sdfIlm.r));
    // 如果是脸的话就是1，身体就是0，然后乘
-   float isFace = step(0, _IsFace);
+   float isFace = step(0.1, _IsFace);
    float shadow = isFace * faceShadow + (1.0 - isFace) * shadowStep;
    // vec3 diffuse = mix(_AmbientColor, _LightColor, faceShadow);
    vec3 diffuse = mix(_AmbientColor, _LightColor, shadow);
@@ -63,7 +64,7 @@ void main() {
 //"   vec3 lighting = rimColor + (shadow + specular) * color;
    vec3 lighting = (rimColor + diffuse + specular) * color;
    FragColor = vec4(lighting , 1.0);
-   if (_SpecularColor.z <= 0) FragColor = vec4(1.0);
+   // if (ilmTex.g == 0.0) FragColor = vec4(1.0);
 //"   FragColor = vec4(mix(_AmbientColor, _LightColor, shadowStep), 1.0);
 //"   FragColor = vec4(specular, 1.0);
 //"   if (spec == 0) FragColor = vec4(0.5, 0, 0, 1.0);

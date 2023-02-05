@@ -144,7 +144,7 @@ NPRShader::NPRShader() {
     shader.setUniform("model", model);
     shader.setUniform("_AmbientColor", ambientColor);
     shader.setUniform("_LightColor", lightColor);
-    shader.setUniform("_SpecularColor", vec3(0.9));
+    shader.setUniform("_SpecularColor", vec3(0.4));
     shader.setUniform("_SpecularRange", 0.7);
     shader.setUniform("sdfMap", 11);
     shader.setUniform("_RimColor", vec3(0.949, 0.624, 0.247));
@@ -156,10 +156,9 @@ NPRShader::NPRShader() {
     shader2.initFromFiles("npr_shader2", "..\\shaders\\npr\\normal.vs", "..\\shaders\\npr\\npr2.fs");
     shader2.bind();
     shader2.setUniform("sdfMap", 11);
-    shader2.setUniform("lightPos", lightPos);
     shader2.setUniform("_AmbientColor", ambientColor);
     shader2.setUniform("_LightColor", lightColor);
-    shader2.setUniform("_SpecularColor", vec3(0.9));
+    shader2.setUniform("_SpecularColor", vec3(0.4));
     shader2.setUniform("_SpecularRange", 0.7);
     shader2.setUniform("_RimColor", vec3(0.949, 0.624, 0.247));
     shader2.setUniform("_RimAmount", 0.9);
@@ -169,10 +168,10 @@ NPRShader::NPRShader() {
     shader2.setUniform("_RimBloomExp", 4.0);
     shader2.setUniform("_ShadowAttWeight", 0.3);
     shader2.setUniform("_Atten", 0.3);
-    shader2.setUniform("_DividLineH", 1.0);
-    shader2.setUniform("_DividLineM", 0.6);
+    shader2.setUniform("_DividLineH", 0.8);
+    shader2.setUniform("_DividLineM", 0.4);
     shader2.setUniform("_DividLineD", 0.0);
-    shader2.setUniform("_BoundSharp", 0.2);
+    shader2.setUniform("_BoundSharp", 0.8);
     shader2.setUniform("model", model);
 
 
@@ -198,7 +197,7 @@ NPRShader::NPRShader() {
     shader3.setUniform("_DividLineM", 0.0);
     shader3.setUniform("_DividLineD", -0.5);
     shader3.setUniform("_DarkFaceColor", vec3(0.851, 0.769, 0.671));
-    shader3.setUniform("_DeepDarkColor", vec3(0.549, 0.498, 0.827));
+    shader3.setUniform("_DeepDarkColor", ambientColor);
     shader3.setUniform("_DiffuseBright", vec3(1.0));
     shader3.setUniform("_FresnelEff", 0.8);
     shader3.setUniform("_FresnelColor", vec3(0.3, 0, 0));
@@ -210,12 +209,12 @@ NPRShader::NPRShader() {
     shader4.setUniform("model", model);
     shader4.setUniform("lightPos", lightPos);
     shader4.setUniform("_MainColor", vec3(1.0));
-    shader4.setUniform("_ShadowColor", vec3(0.7, 0.7, 0.8));
+    shader4.setUniform("_ShadowColor", ambientColor);
     shader4.setUniform("_ShadowRange", 0.5);
     shader4.setUniform("_ShadowSmooth", 0.2);
     //shader4.setUniform("_LightColor0", vec3(1.0, 0.792, 0.749));
-    shader4.setUniform("_LightColor0", vec3(1.0));
-    shader4.setUniform("_SpecularColor", vec3(1.0));
+    shader4.setUniform("_LightColor0", lightColor);
+    shader4.setUniform("_SpecularColor", vec3(0.4));
     shader4.setUniform("_SpecularRange", 0.7);
     shader4.setUniform("_SpecularMulti", 0.3);
     shader4.setUniform("_SpecularGloss", 16.0);
