@@ -131,8 +131,8 @@ NPRShader::NPRShader() {
     glActiveTexture(GL_TEXTURE0);
     //lightPos = vec3(2, 4, 0);
     lightPos = vec3(0 ,0, -3);
-    lightColor = vec3(1, 0.792, 0.749);
-    ambientColor = vec3(0.545, 0.490, 0.431);
+    lightColor = vec3(0.9, 0.9, 0.9);
+    ambientColor = vec3(1.0, 0.729, 0.647);
 
 
     shader.initFromFiles("npr_shader", "..\\shaders\\npr\\normal.vs", "..\\shaders\\npr\\npr1.fs");
@@ -144,14 +144,18 @@ NPRShader::NPRShader() {
     shader.setUniform("model", model);
     shader.setUniform("_AmbientColor", ambientColor);
     shader.setUniform("_LightColor", lightColor);
+    shader.setUniform("_ShadowEdge0", 0.8);
+    shader.setUniform("_ShadowEdge1", 0.9);
     shader.setUniform("_SpecularColor", vec3(0.4));
-    shader.setUniform("_SpecularRange", 0.7);
+    shader.setUniform("_SpecularRange", 0.3);
+    shader.setUniform("_SpecularGloss", 64.0);
     shader.setUniform("sdfMap", 11);
     shader.setUniform("_RimColor", vec3(0.949, 0.624, 0.247));
     shader.setUniform("_RimAmount", 0.9);
     shader.setUniform("_MinRim", 0.65);
     shader.setUniform("_MaxRim", 0.8);
-
+    shader.setUniform("_Bloom", 15.0);
+    shader.setUniform("_RimBloomExp", 4.0);
 
     shader2.initFromFiles("npr_shader2", "..\\shaders\\npr\\normal.vs", "..\\shaders\\npr\\npr2.fs");
     shader2.bind();
@@ -314,13 +318,13 @@ void NPRShader::draw(const mat4& view, const mat4& projection, const vec3& viewP
     //lastFaceShader.setUniform("lightPos", newPos);
     //lastFaceShader.setUniform("aLightPos", newPos);
     //model->drawFaceStencil(lastFaceShader);
-    shader.bind();
-    shader.setUniform("view", view);
-    shader.setUniform("projection", projection);
-    shader.setUniform("viewPos", viewPos);
+    shader2.bind();
+    shader2.setUniform("view", view);
+    shader2.setUniform("projection", projection);
+    shader2.setUniform("viewPos", viewPos);
     glm::vec3 newPos = lightPos + glm::vec3(sin(glfwGetTime() * 0.4) * 8.0, 0.0, 0.0);
-    shader.setUniform("lightPos", newPos);
-    model->drawFaceStencil(shader);
+    shader2.setUniform("lightPos", newPos);
+    model->drawFaceStencil(shader2);
     //// 然后画头发的阴影，如果模板值正确就画上脸 (再标记模板值)
     bangsShadowStencilShader.bind();
     bangsShadowStencilShader.setUniform("view", view);
