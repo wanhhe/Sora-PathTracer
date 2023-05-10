@@ -793,7 +793,24 @@ ExampleApplication::ExampleApplication() : nanogui::Screen(nanogui::Vector2i(140
     auto& lightRValue = lightR.wdg<IntBox<int>>(1);
     lightRValue.setSpinnable(true);
     lightRValue.setEditable(true);
-
+    // g
+    auto& lightG = wrapper.widget();
+    lightG.flexlayout(Orientation::Horizontal);
+    lightG.label(Caption{ "G" },
+        CaptionFont{ "sans" },
+        RelativeSize{ 0.5, 0 });
+    auto& lightGValue = lightG.wdg<IntBox<int>>(1);
+    lightGValue.setSpinnable(true);
+    lightGValue.setEditable(true);
+    // b
+    auto& lightB = wrapper.widget();
+    lightB.flexlayout(Orientation::Horizontal);
+    lightB.label(Caption{ "B" },
+        CaptionFont{ "sans" },
+        RelativeSize{ 0.5, 0 });
+    auto& lightBValue = lightB.wdg<IntBox<int>>(1);
+    lightBValue.setSpinnable(true);
+    lightBValue.setEditable(true);
 
     auto& lightMaterial = *lightTabWidget.createTab("Material");
     lightTabWidget.setActiveTab(0);

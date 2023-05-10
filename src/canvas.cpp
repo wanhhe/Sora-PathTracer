@@ -268,7 +268,7 @@ glm::vec3 lightColors[] = {
 };
 
 MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) : 
-    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(PRELOAD_NONE), init(false), shaderStyle(NPR) {
+    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(SHADOWMAPPING), init(false), shaderStyle(SHADER_STYLE_NONE) {
     using namespace nanogui;
 
     //modelList.emplace_back(new Model("..\\models\\sara\\sara.obj", "Model 1"));
@@ -1602,7 +1602,7 @@ void MyGLCanvas::preloadIBLMapBalls() {
     glActiveTexture(GL_TEXTURE7);
     glBindTexture(GL_TEXTURE_2D, lightGoldAOMap);
     model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(-5.0, 0.0, 2.0));
+    model = glm::translate(model, glm::vec3(4.0, 0.0, 2.0));
     shaderList[18].setUniform("model", model);
     renderSphere();
 
@@ -1616,9 +1616,8 @@ void MyGLCanvas::preloadIBLMapBalls() {
     glBindTexture(GL_TEXTURE_2D, grayRoughnessMap);
     glActiveTexture(GL_TEXTURE7);
     glBindTexture(GL_TEXTURE_2D, grayAOMap);
-
     model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(-2.0, 0.0, 2.0));
+    model = glm::translate(model, glm::vec3(-5.0, 0.0, 2.0));
     shaderList[18].setUniform("model", model);
     renderSphere();
 
@@ -1632,9 +1631,8 @@ void MyGLCanvas::preloadIBLMapBalls() {
     glBindTexture(GL_TEXTURE_2D, goldScuffedRoughnessMap);
     glActiveTexture(GL_TEXTURE7);
     glBindTexture(GL_TEXTURE_2D, goldScuffedAOMap);
-
     model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(1.0, 0.0, 2.0));
+    model = glm::translate(model, glm::vec3(-2.0, 0.0, 2.0));
     shaderList[18].setUniform("model", model);
     renderSphere();
 
@@ -1648,9 +1646,8 @@ void MyGLCanvas::preloadIBLMapBalls() {
     glBindTexture(GL_TEXTURE_2D, rustedironRoughnessMap);
     glActiveTexture(GL_TEXTURE7);
     glBindTexture(GL_TEXTURE_2D, rustedironAOMap);
-
     model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(4.0, 0.0, 2.0));
+    model = glm::translate(model, glm::vec3(1.0, 0.0, 2.0));
     shaderList[18].setUniform("model", model);
     renderSphere();
 

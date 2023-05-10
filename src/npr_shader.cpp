@@ -318,14 +318,14 @@ void NPRShader::draw(const mat4& view, const mat4& projection, const vec3& viewP
     //lastFaceShader.setUniform("lightPos", newPos);
     //lastFaceShader.setUniform("aLightPos", newPos);
     //model->drawFaceStencil(lastFaceShader);
-    shader2.bind();
-    shader2.setUniform("view", view);
-    shader2.setUniform("projection", projection);
-    shader2.setUniform("viewPos", viewPos);
+    shader.bind();
+    shader.setUniform("view", view);
+    shader.setUniform("projection", projection);
+    shader.setUniform("viewPos", viewPos);
     glm::vec3 newPos = lightPos + glm::vec3(sin(glfwGetTime() * 0.4) * 8.0, 0.0, 0.0);
-    shader2.setUniform("lightPos", newPos);
-    model->drawFaceStencil(shader2);
-    //// 然后画头发的阴影，如果模板值正确就画上脸 (再标记模板值)
+    shader.setUniform("lightPos", newPos);
+    model->drawFaceStencil(shader);
+    // 然后画头发的阴影，如果模板值正确就画上脸 (再标记模板值)
     bangsShadowStencilShader.bind();
     bangsShadowStencilShader.setUniform("view", view);
     bangsShadowStencilShader.setUniform("projection", projection);
