@@ -268,7 +268,7 @@ glm::vec3 lightColors[] = {
 };
 
 MyGLCanvas::MyGLCanvas(Widget* parent, Camera* _camera) : 
-    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(SHADOWMAPPING), init(false), shaderStyle(SHADER_STYLE_NONE) {
+    nanogui::GLCanvas(parent), camera(_camera), untitleModel(1), untitleLight(1), preload(PRELOAD_NONE), init(false), shaderStyle(NPR) {
     using namespace nanogui;
 
     //modelList.emplace_back(new Model("..\\models\\sara\\sara.obj", "Model 1"));
