@@ -49,17 +49,23 @@ npr渲染多在边缘处产生较强的菲涅尔现象。通过光源和视角�
 
 ### Shadow Map
 
+在光源空间生成深度图后转换到观察空间对深度进行比较
+
 <img src="./asset/shadowmap.png" alt="shadowmap" style="zoom:80%;" />
 
 
 
 ### PCF阴影
 
-<img src="pcf-on-1683692455482-4.png" alt="./asset/pcf-on.png" style="zoom:80%;" />
+实现软阴影
+
+<img src="./asset/pcf-on.png" style="zoom:80%;" />
 
 
 
 ### PCSS阴影
+
+在PCF的基础上控制采样范围的大小
 
 <img src="./asset/pcss-on.png" alt="pcss-on" style="zoom:80%;" />
 
